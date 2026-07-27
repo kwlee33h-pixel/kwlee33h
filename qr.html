@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>원클릭 QR코드 생성기</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCode.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Google Fonts Inter & Noto Sans KR -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+        }
+        .gradient-text {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .active-tab {
+            background-color: #3b82f6 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+        }
+        .toast {
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+        #qrcode img, #qrcode canvas {
+            margin: 0 auto;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 flex flex-col justify-between">
+
+    <div>
+        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+            <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-blue-500/20">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-slate-900 tracking-tight">원클릭 QR 생성기</h1>
+                        <p class="text-xs text-slate-500">주소나 글자를 입력하고 클릭 한 번으로 QR코드 완성</p>
+                    </div>
+                </div>
+                <button id="quickPresetBtn" class="hidden sm:flex items-center gap-2 text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 샘플 데이터 입력
+                </button>
+            </div>
+        </header>
+
+        <main class="max-w-4xl mx-auto px-4 py-6 md:py-10">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+                
+                <!-- Left Column: Input Form -->
+                <div class="md:col-span-7 space-y-6">
+                    
+                    <!-- Category Selector Tabs -->
+                    <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="grid grid-cols-5 gap-1 text-xs font-medium" id="tabGroup">
+                            <button onclick="switchTab('url')" id="tab-url" class="active-tab py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
+                                <i class="fa-solid fa-link text-sm"></i>
+                                <span>웹주소</span>
+                            </button>
+                            <button onclick="switchTab('text')" id="tab-text" class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
+                                <i class="fa-solid fa-font text-sm"></i>
+                                <span>텍스트</span>
+                            </button>
+                            <button onclick="switchTab('wifi')" id="tab-wifi" class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
+                                <i class="fa-solid fa-wifi text-sm"></i>
+                                <span>Wi-Fi</span>
+                            </button>
+                            <button onclick="switchTab('tel')" id="tab-tel" class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
+                                <i class="fa-solid fa-phone text-sm"></i>
+                                <span>전화번호</span>
+                            </button>
+                            <button onclick="switchTab('email')" id="tab-email" class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
+                                <i class="fa-solid fa-envelope text-sm"></i>
+                                <span>이메일</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Input Cards -->
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+                        
+                        <!-- URL Input View -->
+                        <div id="view-url" class="tab-view space-y-3">
+                            <label class="block text-sm font-semibold text-slate-700">연결할 웹사이트 URL <span class="text-red-500">*</span></label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                                    <i class="fa-solid fa-globe"></i>
+                                </span>
+                                <input type="url" id="input-url" placeholder="https://www.example.com" value="https://www.google.com" 
+                                    class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Text Input View -->
+                        <div id="view-text" class="tab-view hidden space-y-3">
+                            <label class="block text-sm font-semibold text-slate-700">표시할 텍스트 내용</label>
+                            <textarea id="input-text" rows="3" placeholder="QR 코드로 변환할 메세지나 안내 문구를 입력하세요." 
+                                class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"></textarea>
+                        </div>
+
+                        <!-- Wi-Fi Input View -->
+                        <div id="view-wifi" class="tab-view hidden space-y-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">네트워크 이름 (SSID)</label>
+                                <input type="text" id="wifi-ssid" placeholder="Wi-Fi 이름 입력" 
+                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">비밀번호</label>
+                                <input type="text" id="wifi-pass" placeholder="비밀번호 (없으면 빈칸)" 
+                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">암호화 방식</label>
+                                <select id="wifi-type" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                    <option value="WPA">WPA/WPA2 (일반적)</option>
+                                    <option value="WEP">WEP</option>
+                                    <option value="nopass">암호 없음</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Phone Input View -->
+                        <div id="view-tel" class="tab-view hidden space-y-3">
+                            <label class="block text-sm font-semibold text-slate-700">전화번호</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                                    <i class="fa-solid fa-phone"></i>
+                                </span>
+                                <input type="tel" id="input-tel" placeholder="010-1234-5678" 
+                                    class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm">
+                            </div>
+                        </div>
+
+                        <!-- Email Input View -->
+                        <div id="view-email" class="tab-view hidden space-y-3">
+                            <label class="block text-sm font-semibold text-slate-700">이메일 주소</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                                    <i class="fa-solid fa-envelope"></i>
+                                </span>
+                                <input type="email" id="input-email" placeholder="user@example.com" 
+                                    class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm">
+                            </div>
+                        </div>
+
+                        <!-- ONE-CLICK ACTION BUTTON -->
+                        <div class="pt-2">
+                            <button id="generateBtn" onclick="generateQR(true)" 
+                                class="w-full py-3.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-base">
+                                <i class="fa-solid fa-bolt"></i>
+                                <span>클릭 한 번으로 QR코드 생성하기</span>
+                            </button>
+                        </div>
+
+                        <!-- Auto-Live Generation Toggle -->
+                        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs text-slate-500">
+                            <span class="flex items-center gap-1.5">
+                                <i class="fa-solid fa-circle-info text-blue-500"></i>
+                                실시간 자동 생성
+                            </span>
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="autoGenerateToggle" class="sr-only peer" checked>
+                                <div class="relative w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Custom Options Accordion (Collapsible for simplicity) -->
+                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                        <button onclick="toggleOptions()" class="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+                            <span class="flex items-center gap-2">
+                                <i class="fa-solid fa-palette text-blue-500"></i>
+                                상세 설정 (색상 및 크기)
+                            </span>
+                            <i id="optionChevron" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i>
+                        </button>
+
+                        <div id="optionsPanel" class="hidden px-6 pb-6 pt-2 border-t border-slate-100 space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">코드 색상</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="color" id="qrColor" value="#000000" class="w-8 h-8 rounded border border-slate-200 cursor-pointer">
+                                        <input type="text" id="qrColorHex" value="#000000" class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">배경 색상</label>
+                                    <div class="flex items-center gap-2">
+                                        <input type="color" id="qrBgColor" value="#ffffff" class="w-8 h-8 rounded border border-slate-200 cursor-pointer">
+                                        <input type="text" id="qrBgColorHex" value="#ffffff" class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">선명도 (크기)</label>
+                                    <select id="qrSize" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500">
+                                        <option value="180">보통 (180px)</option>
+                                        <option value="256" selected>크게 (256px)</option>
+                                        <option value="350">매우 크게 (350px)</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">복원 수준 (오류정정)</label>
+                                    <select id="qrCorrection" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500">
+                                        <option value="L">Low (7%)</option>
+                                        <option value="M">Medium (15%)</option>
+                                        <option value="Q">Quartile (25%)</option>
+                                        <option value="H" selected>High (30% - 권장)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right Column: Result Box & Actions -->
+                <div class="md:col-span-5 flex flex-col space-y-6">
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center relative min-h-[380px]">
+                        
+                        <!-- Empty State Notice -->
+                        <div id="emptyNotice" class="hidden text-slate-400 space-y-2">
+                            <i class="fa-solid fa-qrcode text-5xl mb-2 text-slate-300"></i>
+                            <p class="text-sm">입력값을 넣고 생성 버튼을 눌러주세요</p>
+                        </div>
+
+                        <!-- QR Code Container -->
+                        <div id="qrWrapper" class="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 shadow-inner inline-block transition-all hover:border-blue-300">
+                            <div id="qrcode" class="flex justify-center items-center"></div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div id="actionArea" class="w-full mt-6 space-y-2.5">
+                            <button onclick="downloadQR()" class="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-download"></i>
+                                <span>PNG 이미지 다운로드</span>
+                            </button>
+                            <button onclick="copyQRImage()" class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
+                                <i class="fa-regular fa-copy"></i>
+                                <span>이미지 클립보드 복사</span>
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <!-- Recent History Section -->
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-xs font-bold text-slate-500 tracking-wider uppercase flex items-center gap-1.5">
+                                <i class="fa-solid fa-clock-rotate-left text-slate-400"></i>
+                                최근 생성 목록
+                            </h3>
+                            <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-red-500 transition-colors">전체 삭제</button>
+                        </div>
+                        <div id="historyList" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs">
+                            <p class="text-slate-400 text-center py-4">생성된 기록이 없습니다.</p>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
+        <p>© 원클릭 QR코드 생성기 — 쉽고 빠른 무료 서비스</p>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast fixed bottom-6 right-6 transform translate-y-20 opacity-0 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 pointer-events-none text-sm font-medium">
+        <i id="toastIcon" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
+        <span id="toastMsg">복사되었습니다!</span>
+    </div>
+
+    <script>
+        // State Variables
+        let currentTab = 'url';
+        let qrcodeObj = null;
+        let recentHistory = [];
+
+        // Tab Switcher Logic
+        function switchTab(tabName) {
+            currentTab = tabName;
+            
+            // Highlight Tab Buttons
+            document.querySelectorAll('#tabGroup button').forEach(btn => {
+                btn.classList.remove('active-tab');
+            });
+            document.getElementById(`tab-${tabName}`).classList.add('active-tab');
+
+            // Toggle Input Views
+            document.querySelectorAll('.tab-view').forEach(view => {
+                view.classList.add('hidden');
+            });
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+
+            // Trigger QR Generation
+            if(document.getElementById('autoGenerateToggle').checked) {
+                generateQR(false);
+            }
+        }
+
+        // Toggle Option Accordion
+        function toggleOptions() {
+            const panel = document.getElementById('optionsPanel');
+            const chevron = document.getElementById('optionChevron');
+            panel.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+        }
+
+        // Get Payload String Based on Tab
+        function getQRContent() {
+            switch(currentTab) {
+                case 'url':
+                    let url = document.getElementById('input-url').value.trim();
+                    if(url && !url.match(/^https?:\/\//i)) {
+                        url = 'https://' + url;
+                    }
+                    return url;
+                case 'text':
+                    return document.getElementById('input-text').value.trim();
+                case 'wifi':
+                    const ssid = document.getElementById('wifi-ssid').value.trim();
+                    const pass = document.getElementById('wifi-pass').value.trim();
+                    const type = document.getElementById('wifi-type').value;
+                    if(!ssid) return '';
+                    return `WIFI:S:${ssid};T:${type};P:${pass};;`;
+                case 'tel':
+                    const tel = document.getElementById('input-tel').value.trim();
+                    return tel ? `tel:${tel}` : '';
+                case 'email':
+                    const email = document.getElementById('input-email').value.trim();
+                    return email ? `mailto:${email}` : '';
+                default:
+                    return '';
+            }
+        }
+
+        // Core QR Generator Function
+        function generateQR(isManualClick = false) {
+            const content = getQRContent();
+            const qrContainer = document.getElementById('qrcode');
+            const emptyNotice = document.getElementById('emptyNotice');
+            const actionArea = document.getElementById('actionArea');
+
+            if (!content) {
+                qrContainer.innerHTML = '';
+                emptyNotice.classList.remove('hidden');
+                actionArea.classList.add('opacity-50', 'pointer-events-none');
+                if(isManualClick) showToast('내용을 입력해 주세요!', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+
+            emptyNotice.classList.add('hidden');
+            actionArea.classList.remove('opacity-50', 'pointer-events-none');
+
+            // Options
+            const size = parseInt(document.getElementById('qrSize').value) || 256;
+            const colorDark = document.getElementById('qrColor').value || '#000000';
+            const colorLight = document.getElementById('qrBgColor').value || '#ffffff';
+            const correctLevelStr = document.getElementById('qrCorrection').value;
+
+            let correctLevel = QRCode.CorrectLevel.H;
+            if(correctLevelStr === 'L') correctLevel = QRCode.CorrectLevel.L;
+            if(correctLevelStr === 'M') correctLevel = QRCode.CorrectLevel.M;
+            if(correctLevelStr === 'Q') correctLevel = QRCode.CorrectLevel.Q;
+
+            // Clear previous output
+            qrContainer.innerHTML = '';
+
+            // Generate
+            try {
+                qrcodeObj = new QRCode(qrContainer, {
+                    text: content,
+                    width: size,
+                    height: size,
+                    colorDark: colorDark,
+                    colorLight: colorLight,
+                    correctLevel: correctLevel
+                });
+
+                if(isManualClick) {
+                    showToast('QR코드가 생성되었습니다!', 'fa-circle-check', 'text-green-400');
+                    addToHistory(content);
+                }
+            } catch(err) {
+                console.error(err);
+                showToast('생성 실패: 텍스트가 너무 깁니다.', 'fa-circle-xmark', 'text-red-400');
+            }
+        }
+
+        // Color Sync Helpers
+        document.getElementById('qrColor').addEventListener('input', (e) => {
+            document.getElementById('qrColorHex').value = e.target.value;
+            if(document.getElementById('autoGenerateToggle').checked) generateQR(false);
+        });
+        document.getElementById('qrBgColor').addEventListener('input', (e) => {
+            document.getElementById('qrBgColorHex').value = e.target.value;
+            if(document.getElementById('autoGenerateToggle').checked) generateQR(false);
+        });
+
+        // Listen for input changes for live update
+        const inputIds = ['input-url', 'input-text', 'wifi-ssid', 'wifi-pass', 'wifi-type', 'input-tel', 'input-email', 'qrSize', 'qrCorrection'];
+        inputIds.forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.addEventListener('input', () => {
+                    if(document.getElementById('autoGenerateToggle').checked) generateQR(false);
+                });
+                el.addEventListener('change', () => {
+                    if(document.getElementById('autoGenerateToggle').checked) generateQR(false);
+                });
+            }
+        });
+
+        // Download Image File
+        function downloadQR() {
+            const img = document.querySelector('#qrcode img');
+            const canvas = document.querySelector('#qrcode canvas');
+
+            let src = '';
+            if (canvas) {
+                src = canvas.toDataURL('image/png');
+            } else if (img && img.src) {
+                src = img.src;
+            }
+
+            if (!src) {
+                showToast('다운로드할 QR 코드가 없습니다.', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+
+            const a = document.createElement('a');
+            a.href = src;
+            a.download = `qrcode_${Date.now()}.png`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            showToast('이미지가 다운로드 되었습니다.', 'fa-circle-check', 'text-green-400');
+        }
+
+        // Copy Image to Clipboard
+        async function copyQRImage() {
+            const canvas = document.querySelector('#qrcode canvas');
+            if(!canvas) {
+                showToast('복사할 QR코드가 없습니다.', 'fa-circle-exclamation', 'text-amber-400');
+                return;
+            }
+
+            try {
+                canvas.toBlob(async (blob) => {
+                    if(!blob) {
+                        showToast('클립보드 복사에 실패했습니다.', 'fa-circle-xmark', 'text-red-400');
+                        return;
+                    }
+                    try {
+                        const item = new ClipboardItem({ 'image/png': blob });
+                        await navigator.clipboard.write([item]);
+                        showToast('클립보드에 이미지 복사 완료!', 'fa-circle-check', 'text-green-400');
+                    } catch(e) {
+                        // Fallback text copy
+                        document.execCommand('copy');
+                        showToast('이미지 복사 미지원 브라우저입니다.', 'fa-circle-info', 'text-blue-400');
+                    }
+                });
+            } catch(e) {
+                showToast('클립보드 복사를 지원하지 않는 환경입니다.', 'fa-circle-xmark', 'text-red-400');
+            }
+        }
+
+        // History Manager
+        function addToHistory(content) {
+            if(!content) return;
+            // Avoid immediate duplicate
+            if(recentHistory.length > 0 && recentHistory[0].content === content) return;
+
+            recentHistory.unshift({
+                content: content,
+                type: currentTab,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            });
+
+            if(recentHistory.length > 5) recentHistory.pop();
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const container = document.getElementById('historyList');
+            if(recentHistory.length === 0) {
+                container.innerHTML = '<p class="text-slate-400 text-center py-4">생성된 기록이 없습니다.</p>';
+                return;
+            }
+
+            container.innerHTML = recentHistory.map((item, idx) => `
+                <div onclick="restoreHistory(${idx})" class="p-2.5 bg-slate-50 hover:bg-blue-50 border border-slate-100 rounded-xl cursor-pointer transition-all flex items-center justify-between group">
+                    <div class="truncate max-w-[200px]">
+                        <span class="font-semibold text-slate-700 block truncate">${escapeHtml(item.content)}</span>
+                        <span class="text-[10px] text-slate-400">${item.type.toUpperCase()} • ${item.time}</span>
+                    </div>
+                    <i class="fa-solid fa-arrow-rotate-left text-slate-300 group-hover:text-blue-600 text-xs"></i>
+                </div>
+            `).join('');
+        }
+
+        function restoreHistory(index) {
+            const item = recentHistory[index];
+            if(!item) return;
+
+            switchTab(item.type);
+            if(item.type === 'url') document.getElementById('input-url').value = item.content;
+            if(item.type === 'text') document.getElementById('input-text').value = item.content;
+            if(item.type === 'tel') document.getElementById('input-tel').value = item.content.replace('tel:', '');
+            if(item.type === 'email') document.getElementById('input-email').value = item.content.replace('mailto:', '');
+
+            generateQR(true);
+        }
+
+        function clearHistory() {
+            recentHistory = [];
+            renderHistory();
+            showToast('목록이 초기화되었습니다.', 'fa-circle-check', 'text-green-400');
+        }
+
+        // Preset Quick Fill
+        document.getElementById('quickPresetBtn').addEventListener('click', () => {
+            switchTab('url');
+            document.getElementById('input-url').value = 'https://www.korea.kr';
+            generateQR(true);
+        });
+
+        // Toast Helper
+        let toastTimeout;
+        function showToast(msg, iconClass = 'fa-circle-check', iconColor = 'text-green-400') {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMsg.innerText = msg;
+            toastIcon.className = `fa-solid ${iconClass} ${iconColor} text-lg`;
+
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // Initialize App on Page Load
+        window.onload = function() {
+            generateQR(false);
+        };
+    </script>
+</body>
+</html>
