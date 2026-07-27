@@ -3,578 +3,1242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>원클릭 QR코드 생성기</title>
+    <title>스페이스&밸류 | 부동산 컨설팅 & 건축 기획설계</title>
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- QRCode.js Library -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <!-- Google Fonts Inter & Noto Sans KR -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js for Feasibility Visualizations -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts (Noto Sans KR & Montserrat) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#2563eb',
+                            600: '#1d4ed8',
+                            700: '#1e40af',
+                            800: '#1e3a8a',
+                            900: '#0f172a',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        },
+                        darkbg: '#0b1120',
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', 'sans-serif'],
+                        montserrat: ['Montserrat', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
     <style>
-        body {
-            font-family: 'Noto Sans KR', sans-serif;
-            background-color: #f8fafc;
+        html { scroll-behavior: smooth; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(229, 231, 235, 0.8);
+        }
+        .dark-glass {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .gradient-text {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            background: linear-gradient(135deg, #2563eb 0%, #d97706 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .active-tab {
-            background-color: #3b82f6 !important;
-            color: #ffffff !important;
-            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+        .hero-gradient {
+            background: linear-gradient(135deg, rgba(11, 17, 32, 0.94) 0%, rgba(30, 58, 138, 0.85) 100%);
         }
-        .toast {
-            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
         }
-        #qrcode img, #qrcode canvas {
-            margin: 0 auto;
-            border-radius: 0.5rem;
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
         }
     </style>
 </head>
-<body class="min-h-screen text-slate-800 flex flex-col justify-between">
+<body class="bg-slate-50 text-slate-800 font-sans antialiased selection:bg-brand-500 selection:text-white">
 
-    <div>
-        <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
-            <div class="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-blue-500/20">
-                        <i class="fa-solid fa-qrcode"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-xl font-bold text-slate-900 tracking-tight">원클릭 QR 생성기</h1>
-                        <p class="text-xs text-slate-500">주소나 글자를 입력하고 클릭 한 번으로 QR코드 완성</p>
+    <!-- Navigation Header -->
+    <header class="fixed top-0 left-0 w-full z-50 transition-all duration-300 bg-white/90 backdrop-blur-md border-b border-slate-200/80 shadow-sm" id="mainHeader">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            
+            <!-- Brand Logo -->
+            <a href="#" class="flex items-center gap-3 group">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-gold-600 flex items-center justify-center text-white shadow-lg shadow-brand-500/20 group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-building-user text-xl"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-bold font-montserrat tracking-tight text-slate-900 block leading-tight">SPACE <span class="text-brand-600">&</span> VALUE</span>
+                    <span class="text-[10px] text-slate-500 font-medium tracking-wider block uppercase">Real Estate & Architecture</span>
+                </div>
+            </a>
+
+            <!-- Desktop Nav Links -->
+            <nav class="hidden md:flex items-center space-x-8 font-medium text-slate-600 text-sm">
+                <a href="#about" class="hover:text-brand-600 transition-colors py-2">회사소개</a>
+                <a href="#services" class="hover:text-brand-600 transition-colors py-2">사업분야</a>
+                <a href="#simulator" class="hover:text-brand-600 transition-colors py-2 text-brand-600 font-semibold flex items-center gap-1.5">
+                    <i class="fa-solid fa-calculator text-gold-500"></i> 사업성 시뮬레이터
+                </a>
+                <a href="#portfolio" class="hover:text-brand-600 transition-colors py-2">기획설계 실적</a>
+                <a href="#process" class="hover:text-brand-600 transition-colors py-2">컨설팅 절차</a>
+                <a href="https://padlet.com/kwlee33h/https://kwlee33h.vercel.app/" target="_blank" rel="noopener noreferrer" class="hover:text-brand-600 transition-colors py-2 flex items-center gap-1 text-slate-700 font-semibold">
+                    <i class="fa-solid fa-comments text-brand-500"></i> 커뮤니티 게시판
+                </a>
+            </nav>
+
+            <!-- Call to Action -->
+            <div class="hidden lg:flex items-center gap-4">
+                <a href="tel:02-555-8900" class="text-xs font-semibold text-slate-700 flex items-center gap-2 hover:text-brand-600 transition-colors">
+                    <span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-brand-600"><i class="fa-solid fa-phone"></i></span>
+                    <span>02-555-8900</span>
+                </a>
+                <a href="#contact" class="bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-all shadow-md shadow-brand-600/20 hover:shadow-lg hover:-translate-y-0.5">
+                    무료 가설계 상담
+                </a>
+            </div>
+
+            <!-- Mobile Hamburger Button -->
+            <button id="mobileMenuBtn" class="md:hidden p-2 text-slate-700 focus:outline-none" aria-label="메뉴 열기">
+                <i class="fa-solid fa-bars text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div id="mobileMenu" class="hidden md:hidden bg-white border-b border-slate-200 px-4 pt-3 pb-6 space-y-3">
+            <a href="#about" class="block py-2 text-slate-700 font-medium">회사소개</a>
+            <a href="#services" class="block py-2 text-slate-700 font-medium">사업분야</a>
+            <a href="#simulator" class="block py-2 text-brand-600 font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-calculator text-gold-500"></i> 사업성 시뮬레이터
+            </a>
+            <a href="#portfolio" class="block py-2 text-slate-700 font-medium">기획설계 실적</a>
+            <a href="#process" class="block py-2 text-slate-700 font-medium">컨설팅 절차</a>
+            <a href="https://padlet.com/kwlee33h/https://kwlee33h.vercel.app/" target="_blank" rel="noopener noreferrer" class="block py-2 text-brand-600 font-semibold flex items-center gap-2">
+                <i class="fa-solid fa-comments text-brand-500"></i> 커뮤니티 게시판
+            </a>
+            <div class="pt-3 border-t border-slate-100 flex flex-col gap-2">
+                <a href="tel:02-555-8900" class="text-center py-2 text-sm text-slate-700 font-semibold bg-slate-100 rounded-lg">
+                    <i class="fa-solid fa-phone mr-1 text-brand-600"></i> 02-555-8900
+                </a>
+                <a href="#contact" class="text-center py-2.5 text-sm font-semibold text-white bg-brand-600 rounded-lg">
+                    무료 가설계 상담 신청
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="relative min-h-screen pt-28 pb-20 flex items-center justify-center overflow-hidden bg-slate-900 text-white">
+        <!-- Background Image with Architectural Overlay -->
+        <div class="absolute inset-0 z-0 opacity-30 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2070&auto=format&fit=crop');"></div>
+        <div class="absolute inset-0 z-0 hero-gradient"></div>
+        
+        <!-- Architectural Grid Lines Pattern overlay -->
+        <div class="absolute inset-0 z-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:24px_24px]"></div>
+
+        <div class="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center pt-8">
+            <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs sm:text-sm font-medium text-gold-400 mb-8 animate-fade-in">
+                <span class="w-2 h-2 rounded-full bg-gold-400 animate-ping"></span>
+                부동산 자산 가치 극대화 솔루션 & 건축 기획설계
+            </div>
+
+            <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight sm:leading-tight lg:leading-tight mb-6">
+                토지 평가부터 <span class="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-sky-300 to-gold-400">건축 가설계</span>까지<br class="hidden sm:block">
+                성공적인 개발을 위한 원스톱 컨설팅
+            </h1>
+
+            <p class="max-w-3xl mx-auto text-base sm:text-lg text-slate-300 mb-10 font-light leading-relaxed">
+                전문 건축사와 부동산 자산운용 분석가가 함께합니다. 대지 분석, 인허가 검토, 
+                사업성 산출, CAD 가설계 도면 리포트까지 개발 리스크를 최소화하고 수익성을 제고합니다.
+            </p>
+
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+                <a href="#simulator" class="w-full sm:w-auto bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 text-white font-bold text-base px-8 py-4 rounded-xl shadow-lg shadow-brand-500/30 hover:shadow-brand-500/50 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-calculator"></i>
+                    내 토지/건물 사업성 시뮬레이션
+                </a>
+                <a href="#contact" class="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/30 font-semibold text-base px-8 py-4 rounded-xl backdrop-blur-md transition-all flex items-center justify-center gap-2">
+                    <i class="fa-regular fa-paper-plane"></i>
+                    1:1 가설계 리포트 신청
+                </a>
+            </div>
+
+            <!-- Key Metrics Bar -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 max-w-5xl mx-auto bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md text-left">
+                <div class="border-r border-white/10 last:border-r-0 pr-4">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-gold-400 font-montserrat">580+</div>
+                    <div class="text-xs sm:text-sm text-slate-400 mt-1">누적 사업성 검토 (건)</div>
+                </div>
+                <div class="border-r border-white/10 md:last:border-r-0 pr-4">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-blue-400 font-montserrat">98.4%</div>
+                    <div class="text-xs sm:text-sm text-slate-400 mt-1">인허가 적합률</div>
+                </div>
+                <div class="border-r border-white/10 last:border-r-0 pr-4">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400 font-montserrat">+32.5%</div>
+                    <div class="text-xs sm:text-sm text-slate-400 mt-1">평균 자산가치 상승률</div>
+                </div>
+                <div>
+                    <div class="text-2xl sm:text-3xl font-extrabold text-purple-400 font-montserrat">15년+</div>
+                    <div class="text-xs sm:text-sm text-slate-400 mt-1">건축/부동산 전문 경력</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interactive Feasibility Calculator Section -->
+    <section id="simulator" class="py-20 bg-slate-100 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-14">
+                <span class="text-brand-600 font-bold text-sm uppercase tracking-wider block mb-2">Smart Feasibility Tool</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                    토지 & 건물 개발 사업성 간이 시뮬레이터
+                </h2>
+                <p class="mt-4 text-slate-600 text-base sm:text-lg">
+                    대지 면적과 용도지역을 선택하시면 법정 용적률/건폐율 기반의 추정 건축규모, 예상 공사비 및 개발 가치를 즉시 산출해 드립니다.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- Calculator Inputs Panel -->
+                <div class="lg:col-span-5 bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200">
+                    <h3 class="text-xl font-bold text-slate-900 mb-6 flex items-center gap-2 border-b border-slate-100 pb-4">
+                        <i class="fa-solid fa-sliders text-brand-600"></i>
+                        조건 입력
+                    </h3>
+
+                    <form id="calculatorForm" class="space-y-5" onsubmit="event.preventDefault();">
+                        <!-- Land Area Input with Unit Switch -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-semibold text-slate-700">대지 면적 (Land Area)</label>
+                                <div class="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50 text-xs">
+                                    <button type="button" id="unitPyungBtn" onclick="setUnit('pyung')" class="px-2.5 py-1 rounded-md font-semibold bg-white text-brand-600 shadow-sm transition-all">평</button>
+                                    <button type="button" id="unitM2Btn" onclick="setUnit('m2')" class="px-2.5 py-1 rounded-md font-semibold text-slate-500 hover:text-slate-800 transition-all">m²</button>
+                                </div>
+                            </div>
+                            <div class="relative">
+                                <input type="number" id="landAreaInput" value="100" min="10" step="1" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition-all pr-12 font-bold text-slate-800 text-lg">
+                                <span id="landAreaUnitLabel" class="absolute right-4 top-3.5 text-slate-400 font-medium">평</span>
+                            </div>
+                            <div class="mt-1 text-xs text-slate-500 flex justify-between">
+                                <span id="convertedAreaText">약 330.58 m²</span>
+                                <span>추천 range: 30평 ~ 1,000평</span>
+                            </div>
+                        </div>
+
+                        <!-- Zoning Type Selection -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">용도지역 (Zoning District)</label>
+                            <select id="zoningSelect" onchange="calculateFeasibility()" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white font-medium text-slate-800 transition-all">
+                                <option value="gen1">제1종일반주거지역 (건폐율 60% / 용적률 150%)</option>
+                                <option value="gen2" selected>제2종일반주거지역 (건폐율 60% / 용적률 200%)</option>
+                                <option value="gen3">제3종일반주거지역 (건폐율 50% / 용적률 250%)</option>
+                                <option value="semi">준주거지역 (건폐율 60% / 용적률 400%)</option>
+                                <option value="commercial_sub">근린상업지역 (건폐율 60% / 용적률 600%)</option>
+                                <option value="commercial_gen">일반상업지역 (건폐율 80% / 용적률 800%)</option>
+                            </select>
+                        </div>
+
+                        <!-- Target Building Purpose -->
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">기획 개발 용도 (Building Usage)</label>
+                            <select id="usageSelect" onchange="calculateFeasibility()" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none bg-white font-medium text-slate-800 transition-all">
+                                <option value="commercial_neighborhood">근린생활시설 / 상가빌딩</option>
+                                <option value="complex">주상복합 / 오피스텔 + 상가</option>
+                                <option value="residential">신축 다세대 / 청년주택</option>
+                                <option value="headquarters">기업 사옥 / 프라이빗 오피스</option>
+                            </select>
+                        </div>
+
+                        <!-- Estimated Construction Cost Slider -->
+                        <div>
+                            <div class="flex justify-between items-center mb-2">
+                                <label class="text-sm font-semibold text-slate-700">평당 예상 신축 공사비</label>
+                                <span id="costPerPyungDisplay" class="text-sm font-bold text-brand-600">850 만원/평</span>
+                            </div>
+                            <input type="range" id="costSlider" min="600" max="1500" step="50" value="850" oninput="calculateFeasibility()" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600">
+                            <div class="flex justify-between text-[11px] text-slate-400 mt-1">
+                                <span>600만원 (표준)</span>
+                                <span>1,000만원 (고급)</span>
+                                <span>1,500만원 (하이엔드)</span>
+                            </div>
+                        </div>
+
+                        <!-- Reset / Calculate Trigger Button -->
+                        <button type="button" onclick="calculateFeasibility()" class="w-full py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-rotate-right"></i>
+                            시뮬레이션 재계산
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Calculator Results Panel -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 pb-4 mb-6 gap-2">
+                            <div>
+                                <span class="text-xs font-semibold text-brand-600 bg-brand-50 px-2.5 py-1 rounded-md">자동 가산출 리포트</span>
+                                <h3 class="text-2xl font-extrabold text-slate-900 mt-1">개발 기획 예상 결과</h3>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-slate-400 block">적용 대지 면적</span>
+                                <span id="resLandArea" class="text-lg font-bold text-slate-800">100 평 (330.58 m²)</span>
+                            </div>
+                        </div>
+
+                        <!-- Metric Highlight Cards -->
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-8">
+                            <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                <span class="text-xs font-medium text-slate-500 block">법정 건폐율 / 용적률</span>
+                                <span id="resBcrFar" class="text-lg font-extrabold text-slate-900 mt-1 block">60% / 200%</span>
+                            </div>
+                            <div class="bg-blue-50/60 p-4 rounded-xl border border-blue-100">
+                                <span class="text-xs font-medium text-brand-700 block">예상 건축면적 (1층)</span>
+                                <span id="resBuildingArea" class="text-lg font-extrabold text-brand-700 mt-1 block">60 평</span>
+                                <span id="resBuildingAreaM2" class="text-[11px] text-brand-500">198.3 m²</span>
+                            </div>
+                            <div class="bg-emerald-50/60 p-4 rounded-xl border border-emerald-100 col-span-2 sm:col-span-1">
+                                <span class="text-xs font-medium text-emerald-800 block">예상 지상 연면적</span>
+                                <span id="resTotalArea" class="text-lg font-extrabold text-emerald-800 mt-1 block">200 평</span>
+                                <span id="resTotalAreaM2" class="text-[11px] text-emerald-600">661.1 m²</span>
+                            </div>
+                        </div>
+
+                        <!-- Secondary Metrics Grid -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center mb-8">
+                            <div class="space-y-3 bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                <div class="flex justify-between items-center text-sm">
+                                    <span class="text-slate-600 font-medium"><i class="fa-solid fa-layer-group text-brand-600 mr-2"></i>추정 층수 규모</span>
+                                    <span id="resFloors" class="font-bold text-slate-900">지하 1층 ~ 지상 4~5층</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm border-t border-slate-200/60 pt-2">
+                                    <span class="text-slate-600 font-medium"><i class="fa-solid fa-coins text-gold-600 mr-2"></i>추정 신축 건축공사비</span>
+                                    <span id="resCostTotal" class="font-bold text-brand-600">약 17.0 억원</span>
+                                </div>
+                                <div class="flex justify-between items-center text-sm border-t border-slate-200/60 pt-2">
+                                    <span class="text-slate-600 font-medium"><i class="fa-solid fa-chart-line text-emerald-600 mr-2"></i>예상 개발 후 가치비율</span>
+                                    <span id="resValueUp" class="font-bold text-emerald-600">+135% ~ 160%</span>
+                                </div>
+                            </div>
+
+                            <!-- Chart Visualization -->
+                            <div class="flex flex-col items-center justify-center p-2">
+                                <div class="w-full max-w-[200px] h-[160px] relative">
+                                    <canvas id="feasibilityChart"></canvas>
+                                </div>
+                                <span class="text-[11px] text-slate-400 mt-2 text-center">용도별 유효 전용면적 배분 추정치</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Banner to Autofill Consultation Form -->
+                        <div class="bg-slate-900 text-white p-5 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div>
+                                <h4 class="font-bold text-base flex items-center gap-2">
+                                    <i class="fa-solid fa-file-signature text-gold-400"></i>
+                                    이 결과로 맞춤 가설계 리포트 받기
+                                </h4>
+                                <p class="text-xs text-slate-300 mt-1">대지 위치(주소)만 알려주시면 정밀 법구역 검토 도면을 무료 작성해 드립니다.</p>
+                            </div>
+                            <button onclick="transferToConsultationForm()" class="whitespace-nowrap bg-gradient-to-r from-gold-500 to-gold-600 hover:from-gold-600 hover:to-gold-700 text-slate-950 font-extrabold px-5 py-2.5 rounded-lg text-sm shadow-md transition-all">
+                                가설계 신청하기 <i class="fa-solid fa-arrow-right ml-1"></i>
+                            </button>
+                        </div>
+
                     </div>
                 </div>
-                <button id="quickPresetBtn" class="hidden sm:flex items-center gap-2 text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
-                    <i class="fa-solid fa-wand-magic-sparkles"></i> 샘플 데이터 입력
-                </button>
-            </div>
-        </header>
 
-        <main class="max-w-4xl mx-auto px-4 py-6 md:py-10">
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+            </div>
+        </div>
+    </section>
+
+    <!-- About & Value Proposition Section -->
+    <section id="about" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 
-                <!-- Left Column: Input Form -->
-                <div class="md:col-span-7 space-y-6">
+                <!-- Graphic / Image Stack -->
+                <div class="relative">
+                    <div class="relative z-10 rounded-2xl overflow-hidden shadow-2xl border border-slate-100">
+                        <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?q=80&w=1200&auto=format&fit=crop" alt="Architectural Planning & Model" class="w-full h-[420px] object-cover">
+                    </div>
+                    <!-- Floating Overlay Card -->
+                    <div class="absolute -bottom-6 -right-6 z-20 bg-slate-900 text-white p-6 rounded-2xl shadow-2xl max-w-xs hidden sm:block border border-slate-700">
+                        <div class="flex items-center gap-3 mb-3">
+                            <div class="w-10 h-10 rounded-full bg-gold-500/20 text-gold-400 flex items-center justify-center">
+                                <i class="fa-solid fa-award text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold">건축사 & 자산운용사</div>
+                                <div class="text-xs text-slate-400">원스톱 콜라보레이션</div>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            건축적 미학과 부동산 금융 수익률의 균형을 완성하는 차별화된 가설계 서비스를 경험하세요.
+                        </p>
+                    </div>
+                    <div class="absolute -top-6 -left-6 w-32 h-32 bg-brand-500/10 rounded-full blur-2xl -z-10"></div>
+                </div>
+
+                <!-- Text Content -->
+                <div>
+                    <span class="text-brand-600 font-bold text-sm uppercase tracking-wider block mb-2">Why Space & Value</span>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mb-6 leading-tight">
+                        건축 설계만으로는 부족합니다.<br>
+                        <span class="text-brand-600">수익성과 법률 인허가</span>가 함께 고려되어야 합니다.
+                    </h2>
+                    <p class="text-slate-600 text-base leading-relaxed mb-6">
+                        많은 토지주와 수용 개발자들이 설계 사전 검토 단계에서 법적 도로 조건, 사선제한, 주차장 법규, 임대 MD 구성을 고려하지 않아 예상치 못한 손실을 입곤 합니다.
+                    </p>
                     
-                    <!-- Category Selector Tabs -->
-                    <div class="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm">
-                        <div class="grid grid-cols-5 gap-1 text-xs font-medium" id="tabGroup">
-                            <button onclick="switchTab('url')" id="tab-url" class="active-tab py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
-                                <i class="fa-solid fa-link text-sm"></i>
-                                <span>웹주소</span>
-                            </button>
-                            <button onclick="switchTab('text')" id="tab-text" class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
-                                <i class="fa-solid fa-font text-sm"></i>
-                                <span>텍스트</span>
-                            </button>
-                            <button onclick="switchTab('wifi')" id="tab-wifi" class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
-                                <i class="fa-solid fa-wifi text-sm"></i>
-                                <span>Wi-Fi</span>
-                            </button>
-                            <button onclick="switchTab('tel')" id="tab-tel" class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
-                                <i class="fa-solid fa-phone text-sm"></i>
-                                <span>전화번호</span>
-                            </button>
-                            <button onclick="switchTab('email')" id="tab-email" class="py-2.5 px-2 rounded-xl text-center transition-all flex flex-col sm:flex-row items-center justify-center gap-1.5 text-slate-600 hover:bg-slate-100">
-                                <i class="fa-solid fa-envelope text-sm"></i>
-                                <span>이메일</span>
-                            </button>
+                    <!-- Key Competencies List -->
+                    <div class="space-y-4 mb-8">
+                        <div class="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div class="w-10 h-10 rounded-lg bg-brand-100 text-brand-600 flex items-center justify-center shrink-0 font-bold">
+                                01
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-base">빅데이터 기반 토지/건물 가치 평가</h4>
+                                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">실거래가 및 주변 상권 임대료 데이터 분석을 통해 개발 후 최적 ROI 모델을 설계합니다.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div class="w-10 h-10 rounded-lg bg-gold-100 text-gold-700 flex items-center justify-center shrink-0 font-bold">
+                                02
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-base">CAD 기반 맞춤 가설계 리포트 제공</h4>
+                                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">지자체 조례 및 건축법을 완벽히 적용한 평면/입면/주차 배치 가설계 도면을 제작합니다.</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-start gap-4 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0 font-bold">
+                                03
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-slate-900 text-base">시공사 적정 견적 검증 및 CM 솔루션</h4>
+                                <p class="text-xs sm:text-sm text-slate-500 mt-0.5">기획설계 후 과다 공사비를 방지하기 위한 적산 검토 및 최적 시공 파트너 매칭을 지원합니다.</p>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Dynamic Input Cards -->
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
-                        
-                        <!-- URL Input View -->
-                        <div id="view-url" class="tab-view space-y-3">
-                            <label class="block text-sm font-semibold text-slate-700">연결할 웹사이트 URL <span class="text-red-500">*</span></label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                                    <i class="fa-solid fa-globe"></i>
-                                </span>
-                                <input type="url" id="input-url" placeholder="https://www.example.com" value="https://www.google.com" 
-                                    class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm">
+                    <a href="#services" class="inline-flex items-center gap-2 text-brand-600 font-bold hover:text-brand-700 transition-colors">
+                        사업분야 전체 보기 <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </a>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="py-20 bg-slate-900 text-white relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="text-gold-400 font-bold text-sm uppercase tracking-wider block mb-2">Our Core Services</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight">
+                    원스톱 부동산 & 건축 전문 서비스
+                </h2>
+                <p class="mt-4 text-slate-400 text-base sm:text-lg">
+                    매수 전 토지 검토부터 기획설계, 노후 리모델링, 인허가 관리까지 프로젝트 성공을 보장합니다.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                
+                <!-- Service Card 1 -->
+                <div class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700 hover:border-brand-500 transition-all hover:-translate-y-1 group">
+                    <div class="w-12 h-12 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center text-xl mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-magnifying-glass-location"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-white">01. 토지 매수전 사업성 분석</h3>
+                    <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4">
+                        매수하려는 부지의 법적 제약, 일조권, 도로지분, 음영구역을 사전에 검토하여 리스크를 차단합니다.
+                    </p>
+                    <ul class="text-xs text-slate-300 space-y-2 border-t border-slate-700/60 pt-4">
+                        <li><i class="fa-solid fa-check text-brand-400 mr-1.5"></i> 토지이용계획원 세부 분석</li>
+                        <li><i class="fa-solid fa-check text-brand-400 mr-1.5"></i> 주변 실거래가 및 임대 시세 조사</li>
+                        <li><i class="fa-solid fa-check text-brand-400 mr-1.5"></i> 매수 타당성 보고서 작성</li>
+                    </ul>
+                </div>
+
+                <!-- Service Card 2 -->
+                <div class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700 hover:border-gold-500 transition-all hover:-translate-y-1 group">
+                    <div class="w-12 h-12 rounded-xl bg-gold-500/20 text-gold-400 flex items-center justify-center text-xl mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-compass-drafting"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-white">02. 건축 기획 & 가설계</h3>
+                    <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4">
+                        최적 용적률과 효율적 전용률을 확보하는 CAD 가설계를 통해 신축 시 유효 면적을 극대화합니다.
+                    </p>
+                    <ul class="text-xs text-slate-300 space-y-2 border-t border-slate-700/60 pt-4">
+                        <li><i class="fa-solid fa-check text-gold-400 mr-1.5"></i> 층별 평면 & 주차 배치 계획</li>
+                        <li><i class="fa-solid fa-check text-gold-400 mr-1.5"></i> 일조권 및 사선제한 최적화</li>
+                        <li><i class="fa-solid fa-check text-gold-400 mr-1.5"></i> 3D 매스 및 기획 도면 도출</li>
+                    </ul>
+                </div>
+
+                <!-- Service Card 3 -->
+                <div class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700 hover:border-emerald-500 transition-all hover:-translate-y-1 group">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xl mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-wrench"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-white">03. 노후건물 Value-Add 리모델링</h3>
+                    <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4">
+                        노후 꼬마빌딩, 다가구주택의 구조 보강, 외관 리모델링 및 증축을 통해 매매가치를 재창출합니다.
+                    </p>
+                    <ul class="text-xs text-slate-300 space-y-2 border-t border-slate-700/60 pt-4">
+                        <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> 구조 진단 및 용도변경 가능성</li>
+                        <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> 엘리베이터 증축 및 파사드 개선</li>
+                        <li><i class="fa-solid fa-check text-emerald-400 mr-1.5"></i> 수익률 개선 MD 컨설팅</li>
+                    </ul>
+                </div>
+
+                <!-- Service Card 4 -->
+                <div class="bg-slate-800/80 rounded-2xl p-6 border border-slate-700 hover:border-purple-500 transition-all hover:-translate-y-1 group">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center text-xl mb-6 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-file-contract"></i>
+                    </div>
+                    <h3 class="text-xl font-bold mb-3 text-white">04. 인허가 & PM/CM 사업관리</h3>
+                    <p class="text-slate-400 text-xs sm:text-sm leading-relaxed mb-4">
+                        건축 심의, 지자체 인허가, 본 설계 진행, 시공사 비교 견적 산출까지 개발 전 과정을 밀착 관리합니다.
+                    </p>
+                    <ul class="text-xs text-slate-300 space-y-2 border-t border-slate-700/60 pt-4">
+                        <li><i class="fa-solid fa-check text-purple-400 mr-1.5"></i> 관공서 인허가 협의 및 승인</li>
+                        <li><i class="fa-solid fa-check text-purple-400 mr-1.5"></i> 시공사 내역서 검증 (적산)</li>
+                        <li><i class="fa-solid fa-check text-purple-400 mr-1.5"></i> 사업비 산정 및 수지분석표 작성</li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Portfolio Section -->
+    <section id="portfolio" class="py-20 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row md:items-end justify-between mb-12">
+                <div>
+                    <span class="text-brand-600 font-bold text-sm uppercase tracking-wider block mb-2">Track Record</span>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                        대표 기획설계 & 컨설팅 실적
+                    </h2>
+                </div>
+
+                <!-- Filter Category Buttons -->
+                <div class="mt-6 md:mt-0 flex flex-wrap gap-2" id="portfolioFilter">
+                    <button onclick="filterPortfolio('all')" class="filter-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-600 text-white transition-all shadow-sm">전체</button>
+                    <button onclick="filterPortfolio('new')" class="filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 transition-all border border-slate-200">신축 기획</button>
+                    <button onclick="filterPortfolio('remodel')" class="filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 transition-all border border-slate-200">리모델링</button>
+                    <button onclick="filterPortfolio('office')" class="filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 transition-all border border-slate-200">사옥/상업시설</button>
+                </div>
+            </div>
+
+            <!-- Portfolio Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="portfolioGrid">
+                
+                <!-- Project 1 -->
+                <div class="portfolio-item new bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-md hover:shadow-xl transition-all group cursor-pointer" onclick="openPortfolioModal(0)">
+                    <div class="relative h-56 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1577495508048-b635879837f1?q=80&w=800&auto=format&fit=crop" alt="성수동 근생 사옥" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <span class="absolute top-4 left-4 bg-brand-600 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">신축 기획</span>
+                    </div>
+                    <div class="p-6">
+                        <span class="text-xs text-slate-400 font-medium">서울 성동구 성수동</span>
+                        <h3 class="text-xl font-bold text-slate-900 mt-1 mb-2 group-hover:text-brand-600 transition-colors">성수 복합 근생사옥 가설계</h3>
+                        <p class="text-slate-500 text-xs leading-relaxed line-clamp-2 mb-4">
+                            좁은 자루형 대지의 도로 접도 조건을 극대화하여 법정 용적률 200%를 초과 달성(지자체 인센티브)한 프로젝트.
+                        </p>
+                        <div class="flex justify-between items-center text-xs font-semibold pt-4 border-t border-slate-100 text-slate-700">
+                            <span>대지: 120평 / 연면적: 340평</span>
+                            <span class="text-emerald-600 font-bold">자산가치 +45%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 2 -->
+                <div class="portfolio-item remodel bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-md hover:shadow-xl transition-all group cursor-pointer" onclick="openPortfolioModal(1)">
+                    <div class="relative h-56 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=800&auto=format&fit=crop" alt="신사동 꼬마빌딩 리모델링" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <span class="absolute top-4 left-4 bg-gold-600 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">리모델링 Value-Up</span>
+                    </div>
+                    <div class="p-6">
+                        <span class="text-xs text-slate-400 font-medium">서울 강남구 신사동</span>
+                        <h3 class="text-xl font-bold text-slate-900 mt-1 mb-2 group-hover:text-brand-600 transition-colors">노후 꼬마빌딩 전면 증축 및 파사드</h3>
+                        <p class="text-slate-500 text-xs leading-relaxed line-clamp-2 mb-4">
+                            30년 된 3층 주택형 건물을 엘리베이터 증축 및 용도변경을 통해 5층 규모의 브랜드 갤러리로 탈바꿈.
+                        </p>
+                        <div class="flex justify-between items-center text-xs font-semibold pt-4 border-t border-slate-100 text-slate-700">
+                            <span>대지: 68평 / 연면적: 180평</span>
+                            <span class="text-emerald-600 font-bold">임대수익률 3.2%→6.8%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 3 -->
+                <div class="portfolio-item office bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-md hover:shadow-xl transition-all group cursor-pointer" onclick="openPortfolioModal(2)">
+                    <div class="relative h-56 overflow-hidden">
+                        <img src="https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=800&auto=format&fit=crop" alt="판교 IT 오피스 사옥" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                        <span class="absolute top-4 left-4 bg-purple-600 text-white text-[11px] font-bold px-3 py-1 rounded-full shadow-md">사옥 개발</span>
+                    </div>
+                    <div class="p-6">
+                        <span class="text-xs text-slate-400 font-medium">경기 성남시 판교</span>
+                        <h3 class="text-xl font-bold text-slate-900 mt-1 mb-2 group-hover:text-brand-600 transition-colors">IT 기업 단독 사옥 기획 컨설팅</h3>
+                        <p class="text-slate-500 text-xs leading-relaxed line-clamp-2 mb-4">
+                            지하 지하주차장 수용 능력을 극대화하고 옥상 정원 및 임직원 스페이스를 결합한 모던 오피스 기획.
+                        </p>
+                        <div class="flex justify-between items-center text-xs font-semibold pt-4 border-t border-slate-100 text-slate-700">
+                            <span>대지: 250평 / 연면적: 890평</span>
+                            <span class="text-emerald-600 font-bold">공사비 12% 절감</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Consulting Process Section -->
+    <section id="process" class="py-20 bg-white border-t border-slate-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <span class="text-brand-600 font-bold text-sm uppercase tracking-wider block mb-2">Step by Step</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+                    체계적인 컨설팅 & 기획설계 절차
+                </h2>
+                <p class="mt-4 text-slate-600 text-base">
+                    투명하고 철저한 단계를 거쳐 의뢰인의 자산을 안전하게 개발합니다.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-6 relative">
+                
+                <!-- Step 1 -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 relative text-center flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-full bg-brand-600 text-white font-extrabold flex items-center justify-center text-lg mb-4 shadow-md">
+                        01
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-base mb-2">기초 상담 & 신청</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        대지 지번 제출, 개발 목적 및 요구사항 수집
+                    </p>
+                </div>
+
+                <!-- Step 2 -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 relative text-center flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-full bg-brand-600 text-white font-extrabold flex items-center justify-center text-lg mb-4 shadow-md">
+                        02
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-base mb-2">현장조사 & 법규검토</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        도로 조건, 일조권, 지목 및 지자체 조례 상세 파악
+                    </p>
+                </div>
+
+                <!-- Step 3 -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 relative text-center flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-full bg-gold-500 text-slate-950 font-extrabold flex items-center justify-center text-lg mb-4 shadow-md">
+                        03
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-base mb-2">CAD 가설계 작성</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        층별 배치, 주차 수량, 3D 매스 및 수지분석 산출
+                    </p>
+                </div>
+
+                <!-- Step 4 -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 relative text-center flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-full bg-brand-600 text-white font-extrabold flex items-center justify-center text-lg mb-4 shadow-md">
+                        04
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-base mb-2">1:1 리포트 브리핑</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        개발 최적안 제시, 공사비 대조 및 MD 전략 브리핑
+                    </p>
+                </div>
+
+                <!-- Step 5 -->
+                <div class="bg-slate-50 p-6 rounded-2xl border border-slate-200 relative text-center flex flex-col items-center">
+                    <div class="w-12 h-12 rounded-full bg-emerald-600 text-white font-extrabold flex items-center justify-center text-lg mb-4 shadow-md">
+                        05
+                    </div>
+                    <h3 class="font-bold text-slate-900 text-base mb-2">본 설계 & PM 착수</h3>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        건축 허가 착수 및 시공사 적산 검증, 사업 관리
+                    </p>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Consultation Form Section -->
+    <section id="contact" class="py-20 bg-slate-900 text-white relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-12">
+                
+                <!-- Info Column -->
+                <div class="lg:col-span-5 space-y-6">
+                    <span class="text-gold-400 font-bold text-sm uppercase tracking-wider block">1:1 Consultation</span>
+                    <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+                        부동산 개발 및 건축 가설계 신청
+                    </h2>
+                    <p class="text-slate-300 text-sm leading-relaxed">
+                        소유하신 대지의 지번이나 검토 중이신 토지 주소를 적어주시면, 
+                        전문 건축사와 자산분석가가 검토 후 **24시간 이내**에 개별 연락드립니다.
+                    </p>
+
+                    <div class="space-y-4 pt-4 border-t border-slate-800">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-brand-500/20 text-brand-400 flex items-center justify-center">
+                                <i class="fa-solid fa-location-dot"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs text-slate-400">사무실 위치</div>
+                                <div class="text-sm font-semibold">서울시 강남구 테헤란로 415, 스페이스타워 12층</div>
                             </div>
                         </div>
 
-                        <!-- Text Input View -->
-                        <div id="view-text" class="tab-view hidden space-y-3">
-                            <label class="block text-sm font-semibold text-slate-700">표시할 텍스트 내용</label>
-                            <textarea id="input-text" rows="3" placeholder="QR 코드로 변환할 메세지나 안내 문구를 입력하세요." 
-                                class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"></textarea>
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-gold-500/20 text-gold-400 flex items-center justify-center">
+                                <i class="fa-solid fa-phone"></i>
+                            </div>
+                            <div>
+                                <div class="text-xs text-slate-400">대표 직통 전화</div>
+                                <div class="text-sm font-semibold">02-555-8900 (평일 09:00 ~ 18:00)</div>
+                            </div>
                         </div>
 
-                        <!-- Wi-Fi Input View -->
-                        <div id="view-wifi" class="tab-view hidden space-y-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">네트워크 이름 (SSID)</label>
-                                <input type="text" id="wifi-ssid" placeholder="Wi-Fi 이름 입력" 
-                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                                <i class="fa-solid fa-envelope"></i>
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">비밀번호</label>
-                                <input type="text" id="wifi-pass" placeholder="비밀번호 (없으면 빈칸)" 
-                                    class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                <div class="text-xs text-slate-400">이메일 문의</div>
+                                <div class="text-sm font-semibold">contact@spacevalue-arch.co.kr</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Trust Badge Card -->
+                    <div class="p-5 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 space-y-2">
+                        <div class="font-bold text-white text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-emerald-400"></i> 정보보호 및 비밀유지 약정
+                        </div>
+                        <p class="leading-relaxed">
+                            제출해주신 대지 정보 및 개인정보는 가설계 검토 및 컨설팅 목적으로만 사용되며 사전 동의 없이 외부에 공개되지 않습니다.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Form Column -->
+                <div class="lg:col-span-7 bg-white text-slate-900 rounded-2xl p-6 sm:p-8 shadow-2xl">
+                    <h3 class="text-xl font-bold mb-6 text-slate-900 pb-3 border-b border-slate-100">
+                        상담 및 무료 가설계 서비스 신청
+                    </h3>
+
+                    <form id="consultForm" onsubmit="submitConsultation(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">성함 / 법인명 *</label>
+                                <input type="text" required placeholder="홍길동" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
                             </div>
                             <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">암호화 방식</label>
-                                <select id="wifi-type" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                                    <option value="WPA">WPA/WPA2 (일반적)</option>
-                                    <option value="WEP">WEP</option>
-                                    <option value="nopass">암호 없음</option>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">연락처 *</label>
+                                <input type="tel" required placeholder="010-0000-0000" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">이메일 주소</label>
+                                <input type="email" placeholder="example@domain.com" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">신청 목적 *</label>
+                                <select id="formPurpose" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
+                                    <option value="concept">토지 신축 가설계 & 사업성검토</option>
+                                    <option value="remodel">기존 건물 리모델링 & 용도변경</option>
+                                    <option value="buy">토지 매수 전 타당성 분석</option>
+                                    <option value="pm">본설계 & 인허가 / CM 서비스</option>
                                 </select>
                             </div>
                         </div>
 
-                        <!-- Phone Input View -->
-                        <div id="view-tel" class="tab-view hidden space-y-3">
-                            <label class="block text-sm font-semibold text-slate-700">전화번호</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                                    <i class="fa-solid fa-phone"></i>
-                                </span>
-                                <input type="tel" id="input-tel" placeholder="010-1234-5678" 
-                                    class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">대상지 주소 (지번 또는 도로명 주소) *</label>
+                            <input type="text" id="formAddress" required placeholder="예: 서울시 성동구 성수동2가 000-00" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
+                        </div>
+
+                        <!-- Area / Notes Input -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">대지 면적 (평/m²)</label>
+                                <input type="text" id="formArea" placeholder="예: 100평" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">희망 보유/개발 예산</label>
+                                <input type="text" placeholder="예: 약 20억원 내외" class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm">
                             </div>
                         </div>
 
-                        <!-- Email Input View -->
-                        <div id="view-email" class="tab-view hidden space-y-3">
-                            <label class="block text-sm font-semibold text-slate-700">이메일 주소</label>
-                            <div class="relative">
-                                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
-                                    <i class="fa-solid fa-envelope"></i>
-                                </span>
-                                <input type="email" id="input-email" placeholder="user@example.com" 
-                                    class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm">
-                            </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">상세 문의 내용 및 요구 사항</label>
+                            <textarea id="formMessage" rows="3" placeholder="원하시는 건축 규모, 층수, 임대 목적이나 궁금하신 법규 조항이 있다면 적어주세요." class="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none text-sm resize-none"></textarea>
                         </div>
 
-                        <!-- ONE-CLICK ACTION BUTTON -->
-                        <div class="pt-2">
-                            <button id="generateBtn" onclick="generateQR(true)" 
-                                class="w-full py-3.5 px-6 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold rounded-xl shadow-lg shadow-blue-500/25 active:scale-[0.99] transition-all flex items-center justify-center gap-2 text-base">
-                                <i class="fa-solid fa-bolt"></i>
-                                <span>클릭 한 번으로 QR코드 생성하기</span>
-                            </button>
+                        <!-- Agreement Checkbox -->
+                        <div class="flex items-center gap-2 pt-2">
+                            <input type="checkbox" id="agreePrivacy" required class="w-4 h-4 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+                            <label for="agreePrivacy" class="text-xs text-slate-600">개인정보 수집 및 이용 동의 (필수)</label>
                         </div>
 
-                        <!-- Auto-Live Generation Toggle -->
-                        <div class="flex items-center justify-between pt-1 border-t border-slate-100 text-xs text-slate-500">
-                            <span class="flex items-center gap-1.5">
-                                <i class="fa-solid fa-circle-info text-blue-500"></i>
-                                실시간 자동 생성
-                            </span>
-                            <label class="inline-flex items-center cursor-pointer">
-                                <input type="checkbox" id="autoGenerateToggle" class="sr-only peer" checked>
-                                <div class="relative w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Custom Options Accordion (Collapsible for simplicity) -->
-                    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                        <button onclick="toggleOptions()" class="w-full px-6 py-4 flex items-center justify-between text-left text-sm font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
-                            <span class="flex items-center gap-2">
-                                <i class="fa-solid fa-palette text-blue-500"></i>
-                                상세 설정 (색상 및 크기)
-                            </span>
-                            <i id="optionChevron" class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform"></i>
+                        <button type="submit" class="w-full py-3.5 bg-brand-600 hover:bg-brand-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-brand-600/30 text-base mt-2">
+                            1:1 무료 가설계 리포트 신청하기
                         </button>
-
-                        <div id="optionsPanel" class="hidden px-6 pb-6 pt-2 border-t border-slate-100 space-y-4">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">코드 색상</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="color" id="qrColor" value="#000000" class="w-8 h-8 rounded border border-slate-200 cursor-pointer">
-                                        <input type="text" id="qrColorHex" value="#000000" class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg">
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">배경 색상</label>
-                                    <div class="flex items-center gap-2">
-                                        <input type="color" id="qrBgColor" value="#ffffff" class="w-8 h-8 rounded border border-slate-200 cursor-pointer">
-                                        <input type="text" id="qrBgColorHex" value="#ffffff" class="w-full px-2.5 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">선명도 (크기)</label>
-                                    <select id="qrSize" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500">
-                                        <option value="180">보통 (180px)</option>
-                                        <option value="256" selected>크게 (256px)</option>
-                                        <option value="350">매우 크게 (350px)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1.5">복원 수준 (오류정정)</label>
-                                    <select id="qrCorrection" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-500">
-                                        <option value="L">Low (7%)</option>
-                                        <option value="M">Medium (15%)</option>
-                                        <option value="Q">Quartile (25%)</option>
-                                        <option value="H" selected>High (30% - 권장)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                <!-- Right Column: Result Box & Actions -->
-                <div class="md:col-span-5 flex flex-col space-y-6">
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center relative min-h-[380px]">
-                        
-                        <!-- Empty State Notice -->
-                        <div id="emptyNotice" class="hidden text-slate-400 space-y-2">
-                            <i class="fa-solid fa-qrcode text-5xl mb-2 text-slate-300"></i>
-                            <p class="text-sm">입력값을 넣고 생성 버튼을 눌러주세요</p>
-                        </div>
-
-                        <!-- QR Code Container -->
-                        <div id="qrWrapper" class="p-4 bg-white rounded-2xl border-2 border-dashed border-slate-200 shadow-inner inline-block transition-all hover:border-blue-300">
-                            <div id="qrcode" class="flex justify-center items-center"></div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div id="actionArea" class="w-full mt-6 space-y-2.5">
-                            <button onclick="downloadQR()" class="w-full py-3 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-semibold rounded-xl shadow transition-all flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-download"></i>
-                                <span>PNG 이미지 다운로드</span>
-                            </button>
-                            <button onclick="copyQRImage()" class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2">
-                                <i class="fa-regular fa-copy"></i>
-                                <span>이미지 클립보드 복사</span>
-                            </button>
-                        </div>
-
-                    </div>
-
-                    <!-- Recent History Section -->
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                        <div class="flex items-center justify-between mb-3">
-                            <h3 class="text-xs font-bold text-slate-500 tracking-wider uppercase flex items-center gap-1.5">
-                                <i class="fa-solid fa-clock-rotate-left text-slate-400"></i>
-                                최근 생성 목록
-                            </h3>
-                            <button onclick="clearHistory()" class="text-xs text-slate-400 hover:text-red-500 transition-colors">전체 삭제</button>
-                        </div>
-                        <div id="historyList" class="space-y-2 max-h-48 overflow-y-auto pr-1 text-xs">
-                            <p class="text-slate-400 text-center py-4">생성된 기록이 없습니다.</p>
-                        </div>
-                    </div>
-
+                    </form>
                 </div>
 
             </div>
-        </main>
-    </div>
+        </div>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="py-16 bg-slate-50 border-t border-slate-200">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 text-center mb-8">
+                자주 묻는 질문 (FAQ)
+            </h2>
+
+            <div class="space-y-4">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <button onclick="toggleFaq(this)" class="w-full px-6 py-4 text-left font-bold text-slate-800 text-sm sm:text-base flex justify-between items-center">
+                        <span>Q. 가설계 서비스는 정말 무료로 제공되나요?</span>
+                        <i class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </button>
+                    <div class="faq-answer hidden px-6 pb-4 text-xs sm:text-sm text-slate-600 border-t border-slate-100 pt-3">
+                        네, 기초 대지 검토 및 법적 용적률/건폐율 산출, 개략 배치 가설계 리포트는 1회 무료로 제공해 드립니다. 본 계약 후 허가용 본설계로 진행 시 상세 비용이 발생합니다.
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <button onclick="toggleFaq(this)" class="w-full px-6 py-4 text-left font-bold text-slate-800 text-sm sm:text-base flex justify-between items-center">
+                        <span>Q. 매수 전 대지도 분석해 주시나요?</span>
+                        <i class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </button>
+                    <div class="faq-answer hidden px-6 pb-4 text-xs sm:text-sm text-slate-600 border-t border-slate-100 pt-3">
+                        네, 부동산 매수 계약 전 토지의 일조권 사선제한, 도로 확포장 계획, 건축 불가능 위험 요소 등을 사전 점검해 드립니다.
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <button onclick="toggleFaq(this)" class="w-full px-6 py-4 text-left font-bold text-slate-800 text-sm sm:text-base flex justify-between items-center">
+                        <span>Q. 가설계 리포트를 받기까지 기간은 얼마나 걸리나요?</span>
+                        <i class="fa-solid fa-chevron-down text-slate-400 transition-transform"></i>
+                    </button>
+                    <div class="faq-answer hidden px-6 pb-4 text-xs sm:text-sm text-slate-600 border-t border-slate-100 pt-3">
+                        주소 접수 후 영업일 기준 보통 24시간~48시간 이내에 1차 분석 리포트를 작성하여 안내해 드립니다.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-400">
-        <p>© 원클릭 QR코드 생성기 — 쉽고 빠른 무료 서비스</p>
+    <footer class="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8 pb-8 border-b border-slate-800">
+                <div class="md:col-span-2">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 rounded-lg bg-brand-600 flex items-center justify-center text-white font-bold">
+                            <i class="fa-solid fa-building-user"></i>
+                        </div>
+                        <span class="text-lg font-bold text-white font-montserrat tracking-tight">SPACE & VALUE</span>
+                    </div>
+                    <p class="text-xs text-slate-400 leading-relaxed max-w-sm">
+                        (주)스페이스앤밸류 부동산컨설팅 & 건축사사무소<br>
+                        부동산 자산가치 수지분석, 인허가 가설계, 건축 기획 및 CM 종합 솔루션
+                    </p>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold text-sm mb-3">빠른 링크</h4>
+                    <ul class="text-xs space-y-2">
+                        <li><a href="#simulator" class="hover:text-white transition-colors">사업성 시뮬레이터</a></li>
+                        <li><a href="#services" class="hover:text-white transition-colors">사업분야 안내</a></li>
+                        <li><a href="#portfolio" class="hover:text-white transition-colors">기획설계 실적</a></li>
+                        <li><a href="#contact" class="hover:text-white transition-colors">무료 가설계 신청</a></li>
+                        <li><a href="https://padlet.com/kwlee33h/https://kwlee33h.vercel.app/" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors text-gold-400">커뮤니티 게시판 (Padlet)</a></li>
+                    </ul>
+                </div>
+
+                <div>
+                    <h4 class="text-white font-bold text-sm mb-3">고객센터</h4>
+                    <div class="text-xs space-y-1 text-slate-400">
+                        <p class="text-base font-bold text-gold-400">02-555-8900</p>
+                        <p>평일 09:00 ~ 18:00 (주말/공휴일 휴무)</p>
+                        <p>팩스: 02-555-8901</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-between items-center text-xs text-slate-500 gap-4">
+                <p>© 2026 Space & Value Real Estate & Architecture Consulting. All rights reserved.</p>
+                <div class="flex gap-4">
+                    <a href="#" class="hover:text-slate-400">개인정보처리방침</a>
+                    <a href="#" class="hover:text-slate-400">이용약관</a>
+                </div>
+            </div>
+        </div>
     </footer>
 
-    <!-- Toast Notification -->
-    <div id="toast" class="toast fixed bottom-6 right-6 transform translate-y-20 opacity-0 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50 pointer-events-none text-sm font-medium">
-        <i id="toastIcon" class="fa-solid fa-circle-check text-green-400 text-lg"></i>
-        <span id="toastMsg">복사되었습니다!</span>
+    <!-- Portfolio Detail Modal -->
+    <div id="portfolioModal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 sm:p-8 relative custom-scrollbar">
+            <button onclick="closePortfolioModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-xl w-8 h-8 flex items-center justify-center rounded-full bg-slate-100">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            
+            <div id="modalContent">
+                <!-- Injected via JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Fixed Bottom CTA Bar -->
+    <div class="lg:hidden fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-md border-t border-slate-200 p-3 z-40 flex items-center justify-between gap-3 shadow-lg">
+        <a href="tel:02-555-8900" class="flex-1 py-2.5 bg-slate-100 text-slate-800 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border border-slate-200">
+            <i class="fa-solid fa-phone text-brand-600"></i> 전화 상담
+        </a>
+        <a href="#simulator" class="flex-1 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-calculator text-gold-400"></i> 사업성 계산
+        </a>
+        <a href="#contact" class="flex-1 py-2.5 bg-brand-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-pen-to-square"></i> 가설계 신청
+        </a>
     </div>
 
     <script>
         // State Variables
-        let currentTab = 'url';
-        let qrcodeObj = null;
-        let recentHistory = [];
+        let currentUnit = 'pyung'; // 'pyung' or 'm2'
+        let chartInstance = null;
 
-        // Tab Switcher Logic
-        function switchTab(tabName) {
-            currentTab = tabName;
+        // Portfolio Data
+        const portfolioData = [
+            {
+                title: "성수동 복합 근생사옥 가설계",
+                category: "신축 기획설계",
+                location: "서울시 성동구 성수동2가",
+                img: "https://images.unsplash.com/photo-1577495508048-b635879837f1?q=80&w=800&auto=format&fit=crop",
+                landArea: "120평 (396.6 m²)",
+                totalArea: "340평 (1,123.9 m²)",
+                floors: "지하 1층 / 지상 5층",
+                usage: "근린생활시설 & 테크기업 사옥",
+                description: "세로로 긴 자루형 대지의 음영 구역과 인접 대지 경계선의 법적 이격거리를 역이용한 모던한 파사드 계획. 지하 1층 층고를 4.5m 확보하여 스튜디오 공간으로 특화하고, 지상 상층부는 테라스형 사옥 공간을 도출하여 자산가치를 약 45% 상승시켰습니다."
+            },
+            {
+                title: "신사동 꼬마빌딩 전면 증축 및 파사드",
+                category: "리모델링 Value-Up",
+                location: "서울시 강남구 신사동",
+                img: "https://images.unsplash.com/photo-1513694203232-719a280e022f?q=80&w=800&auto=format&fit=crop",
+                landArea: "68평 (224.7 m²)",
+                totalArea: "180평 (595.0 m²)",
+                floors: "지상 3층 -> 지상 5층 (2개층 증축)",
+                usage: "플래그십 스토어 & 메디컬 의원",
+                description: "30년 경과 노후 주택형 건물의 연와조 구조를 철골 보강하고 승강기를 신설하였습니다. 법적 용적률 잔여분을 전면 증축하여 임대 면적을 확장하였으며, 매매가 대비 임대 수익률을 기존 3.2%에서 6.8%로 개선하였습니다."
+            },
+            {
+                title: "판교 IT 기업 단독 사옥 개발",
+                category: "기업 사옥 기획",
+                location: "경기도 성남시 분당구 판교동",
+                img: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=800&auto=format&fit=crop",
+                landArea: "250평 (826.4 m²)",
+                totalArea: "890평 (2,942.1 m²)",
+                floors: "지하 2층 / 지상 6층",
+                usage: "업무시설 & 임직원 복지 라운지",
+                description: "지하 주차면수를 법정 기준 대비 140% 확보하여 임직원 출퇴근 편의를 도모한 설계. 1층을 공개공지와 연계한 카페테리아로 기획하여 지역 상권과의 상생 및 건물 유동인구를 유입시킨 사례입니다."
+            }
+        ];
+
+        // Zoning Rules Data (BCR & FAR estimates)
+        const zoningRules = {
+            'gen1': { bcr: 0.60, far: 1.50, label: '제1종일반주거' },
+            'gen2': { bcr: 0.60, far: 2.00, label: '제2종일반주거' },
+            'gen3': { bcr: 0.50, far: 2.50, label: '제3종일반주거' },
+            'semi': { bcr: 0.60, far: 4.00, label: '준주거지역' },
+            'commercial_sub': { bcr: 0.60, far: 6.00, label: '근린상업지역' },
+            'commercial_gen': { bcr: 0.80, far: 8.00, label: '일반상업지역' }
+        };
+
+        // Mobile Menu Toggle
+        document.getElementById('mobileMenuBtn').addEventListener('click', function() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        });
+
+        // Toggle Unit (Pyung <-> m2)
+        function setUnit(unit) {
+            currentUnit = unit;
+            const pyungBtn = document.getElementById('unitPyungBtn');
+            const m2Btn = document.getElementById('unitM2Btn');
+            const label = document.getElementById('landAreaUnitLabel');
+            const input = document.getElementById('landAreaInput');
+
+            if (unit === 'pyung') {
+                pyungBtn.className = "px-2.5 py-1 rounded-md font-semibold bg-white text-brand-600 shadow-sm transition-all";
+                m2Btn.className = "px-2.5 py-1 rounded-md font-semibold text-slate-500 hover:text-slate-800 transition-all";
+                label.innerText = "평";
+            } else {
+                m2Btn.className = "px-2.5 py-1 rounded-md font-semibold bg-white text-brand-600 shadow-sm transition-all";
+                pyungBtn.className = "px-2.5 py-1 rounded-md font-semibold text-slate-500 hover:text-slate-800 transition-all";
+                label.innerText = "m²";
+            }
+            calculateFeasibility();
+        }
+
+        // Feasibility Calculation Engine
+        function calculateFeasibility() {
+            const rawArea = parseFloat(document.getElementById('landAreaInput').value) || 0;
+            const zoningKey = document.getElementById('zoningSelect').value;
+            const usageKey = document.getElementById('usageSelect').value;
+            const costPerPyung = parseInt(document.getElementById('costSlider').value);
+
+            // Update cost display label
+            document.getElementById('costPerPyungDisplay').innerText = `${costPerPyung.toLocaleString()} 만원/평`;
+
+            // Convert land area to both Pyung and m2
+            let areaPyung = 0;
+            let areaM2 = 0;
+
+            if (currentUnit === 'pyung') {
+                areaPyung = rawArea;
+                areaM2 = rawArea * 3.305785;
+            } else {
+                areaM2 = rawArea;
+                areaPyung = rawArea / 3.305785;
+            }
+
+            document.getElementById('convertedAreaText').innerText = currentUnit === 'pyung' 
+                ? `약 ${areaM2.toFixed(2)} m²` 
+                : `약 ${areaPyung.toFixed(2)} 평`;
+
+            const rule = zoningRules[zoningKey] || zoningRules['gen2'];
+
+            // Estimated Building Coverage Area (건축면적)
+            const buildingAreaPyung = areaPyung * rule.bcr;
+            const buildingAreaM2 = areaM2 * rule.bcr;
+
+            // Estimated Total Floor Area above ground (연면적)
+            const totalAreaPyung = areaPyung * rule.far;
+            const totalAreaM2 = areaM2 * rule.far;
+
+            // Estimated Floors
+            const approxFloors = Math.min(Math.max(Math.round(rule.far / rule.bcr), 2), 15);
+
+            // Estimated Construction Cost (Total Area * Cost per Pyung)
+            const totalCostMillion = (totalAreaPyung * costPerPyung);
+            const totalCostEon = (totalCostMillion / 10000).toFixed(1);
+
+            // Update UI Labels
+            document.getElementById('resLandArea').innerText = `${areaPyung.toFixed(0)} 평 (${areaM2.toFixed(1)} m²)`;
+            document.getElementById('resBcrFar').innerText = `${(rule.bcr * 100)}% / ${(rule.far * 100)}%`;
             
-            // Highlight Tab Buttons
-            document.querySelectorAll('#tabGroup button').forEach(btn => {
-                btn.classList.remove('active-tab');
-            });
-            document.getElementById(`tab-${tabName}`).classList.add('active-tab');
+            document.getElementById('resBuildingArea').innerText = `${buildingAreaPyung.toFixed(1)} 평`;
+            document.getElementById('resBuildingAreaM2').innerText = `${buildingAreaM2.toFixed(1)} m²`;
 
-            // Toggle Input Views
-            document.querySelectorAll('.tab-view').forEach(view => {
-                view.classList.add('hidden');
-            });
-            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            document.getElementById('resTotalArea').innerText = `${totalAreaPyung.toFixed(1)} 평`;
+            document.getElementById('resTotalAreaM2').innerText = `${totalAreaM2.toFixed(1)} m²`;
 
-            // Trigger QR Generation
-            if(document.getElementById('autoGenerateToggle').checked) {
-                generateQR(false);
-            }
+            document.getElementById('resFloors').innerText = `지하 1층 ~ 지상 ${approxFloors}층 내외`;
+            document.getElementById('resCostTotal').innerText = `약 ${totalCostEon} 억원`;
+
+            // Value Up Estimate Ratio
+            let valUp = "+120% ~ 140%";
+            if(zoningKey.includes('commercial')) valUp = "+160% ~ 220%";
+            else if(zoningKey === 'semi') valUp = "+140% ~ 180%";
+            document.getElementById('resValueUp').innerText = valUp;
+
+            // Update Chart
+            updateChart(buildingAreaPyung, totalAreaPyung);
         }
 
-        // Toggle Option Accordion
-        function toggleOptions() {
-            const panel = document.getElementById('optionsPanel');
-            const chevron = document.getElementById('optionChevron');
-            panel.classList.toggle('hidden');
-            chevron.classList.toggle('rotate-180');
-        }
+        // Initialize / Update Chart.js
+        function updateChart(buildingPyung, totalPyung) {
+            const ctx = document.getElementById('feasibilityChart').getContext('2d');
+            
+            const retailArea = Math.round(buildingPyung * 0.9);
+            const officeArea = Math.round(Math.max(0, totalPyung - retailArea));
+            const commonArea = Math.round(totalPyung * 0.15);
 
-        // Get Payload String Based on Tab
-        function getQRContent() {
-            switch(currentTab) {
-                case 'url':
-                    let url = document.getElementById('input-url').value.trim();
-                    if(url && !url.match(/^https?:\/\//i)) {
-                        url = 'https://' + url;
-                    }
-                    return url;
-                case 'text':
-                    return document.getElementById('input-text').value.trim();
-                case 'wifi':
-                    const ssid = document.getElementById('wifi-ssid').value.trim();
-                    const pass = document.getElementById('wifi-pass').value.trim();
-                    const type = document.getElementById('wifi-type').value;
-                    if(!ssid) return '';
-                    return `WIFI:S:${ssid};T:${type};P:${pass};;`;
-                case 'tel':
-                    const tel = document.getElementById('input-tel').value.trim();
-                    return tel ? `tel:${tel}` : '';
-                case 'email':
-                    const email = document.getElementById('input-email').value.trim();
-                    return email ? `mailto:${email}` : '';
-                default:
-                    return '';
-            }
-        }
-
-        // Core QR Generator Function
-        function generateQR(isManualClick = false) {
-            const content = getQRContent();
-            const qrContainer = document.getElementById('qrcode');
-            const emptyNotice = document.getElementById('emptyNotice');
-            const actionArea = document.getElementById('actionArea');
-
-            if (!content) {
-                qrContainer.innerHTML = '';
-                emptyNotice.classList.remove('hidden');
-                actionArea.classList.add('opacity-50', 'pointer-events-none');
-                if(isManualClick) showToast('내용을 입력해 주세요!', 'fa-circle-exclamation', 'text-amber-400');
-                return;
+            if (chartInstance) {
+                chartInstance.destroy();
             }
 
-            emptyNotice.classList.add('hidden');
-            actionArea.classList.remove('opacity-50', 'pointer-events-none');
-
-            // Options
-            const size = parseInt(document.getElementById('qrSize').value) || 256;
-            const colorDark = document.getElementById('qrColor').value || '#000000';
-            const colorLight = document.getElementById('qrBgColor').value || '#ffffff';
-            const correctLevelStr = document.getElementById('qrCorrection').value;
-
-            let correctLevel = QRCode.CorrectLevel.H;
-            if(correctLevelStr === 'L') correctLevel = QRCode.CorrectLevel.L;
-            if(correctLevelStr === 'M') correctLevel = QRCode.CorrectLevel.M;
-            if(correctLevelStr === 'Q') correctLevel = QRCode.CorrectLevel.Q;
-
-            // Clear previous output
-            qrContainer.innerHTML = '';
-
-            // Generate
-            try {
-                qrcodeObj = new QRCode(qrContainer, {
-                    text: content,
-                    width: size,
-                    height: size,
-                    colorDark: colorDark,
-                    colorLight: colorLight,
-                    correctLevel: correctLevel
-                });
-
-                if(isManualClick) {
-                    showToast('QR코드가 생성되었습니다!', 'fa-circle-check', 'text-green-400');
-                    addToHistory(content);
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['1층 근생/상가', '상층부 업무/주거', '공용/복도/주차'],
+                    datasets: [{
+                        data: [retailArea, officeArea, commonArea],
+                        backgroundColor: ['#2563eb', '#f59e0b', '#cbd5e1'],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    cutout: '70%'
                 }
-            } catch(err) {
-                console.error(err);
-                showToast('생성 실패: 텍스트가 너무 깁니다.', 'fa-circle-xmark', 'text-red-400');
-            }
+            });
         }
 
-        // Color Sync Helpers
-        document.getElementById('qrColor').addEventListener('input', (e) => {
-            document.getElementById('qrColorHex').value = e.target.value;
-            if(document.getElementById('autoGenerateToggle').checked) generateQR(false);
-        });
-        document.getElementById('qrBgColor').addEventListener('input', (e) => {
-            document.getElementById('qrBgColorHex').value = e.target.value;
-            if(document.getElementById('autoGenerateToggle').checked) generateQR(false);
-        });
+        // Transfer Calculator Output to Consultation Form
+        function transferToConsultationForm() {
+            const areaPyung = document.getElementById('resLandArea').innerText;
+            const zoningText = document.getElementById('zoningSelect').options[document.getElementById('zoningSelect').selectedIndex].text;
+            const floors = document.getElementById('resFloors').innerText;
 
-        // Listen for input changes for live update
-        const inputIds = ['input-url', 'input-text', 'wifi-ssid', 'wifi-pass', 'wifi-type', 'input-tel', 'input-email', 'qrSize', 'qrCorrection'];
-        inputIds.forEach(id => {
-            const el = document.getElementById(id);
-            if(el) {
-                el.addEventListener('input', () => {
-                    if(document.getElementById('autoGenerateToggle').checked) generateQR(false);
-                });
-                el.addEventListener('change', () => {
-                    if(document.getElementById('autoGenerateToggle').checked) generateQR(false);
-                });
-            }
-        });
+            document.getElementById('formArea').value = areaPyung;
+            document.getElementById('formMessage').value = `[시뮬레이터 자동연동]\n- 적용 용도지역: ${zoningText}\n- 추정 지상 규모: ${floors}\n\n위 가산출 조건 기반의 1:1 세부 법률 가설계 도면 리포트를 요청합니다.`;
 
-        // Download Image File
-        function downloadQR() {
-            const img = document.querySelector('#qrcode img');
-            const canvas = document.querySelector('#qrcode canvas');
-
-            let src = '';
-            if (canvas) {
-                src = canvas.toDataURL('image/png');
-            } else if (img && img.src) {
-                src = img.src;
-            }
-
-            if (!src) {
-                showToast('다운로드할 QR 코드가 없습니다.', 'fa-circle-exclamation', 'text-amber-400');
-                return;
-            }
-
-            const a = document.createElement('a');
-            a.href = src;
-            a.download = `qrcode_${Date.now()}.png`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-
-            showToast('이미지가 다운로드 되었습니다.', 'fa-circle-check', 'text-green-400');
+            // Scroll to form smooth
+            document.getElementById('contact').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Copy Image to Clipboard
-        async function copyQRImage() {
-            const canvas = document.querySelector('#qrcode canvas');
-            if(!canvas) {
-                showToast('복사할 QR코드가 없습니다.', 'fa-circle-exclamation', 'text-amber-400');
-                return;
-            }
+        // Portfolio Filtering
+        function filterPortfolio(category) {
+            const items = document.querySelectorAll('.portfolio-item');
+            const buttons = document.querySelectorAll('#portfolioFilter button');
 
-            try {
-                canvas.toBlob(async (blob) => {
-                    if(!blob) {
-                        showToast('클립보드 복사에 실패했습니다.', 'fa-circle-xmark', 'text-red-400');
-                        return;
-                    }
-                    try {
-                        const item = new ClipboardItem({ 'image/png': blob });
-                        await navigator.clipboard.write([item]);
-                        showToast('클립보드에 이미지 복사 완료!', 'fa-circle-check', 'text-green-400');
-                    } catch(e) {
-                        // Fallback text copy
-                        document.execCommand('copy');
-                        showToast('이미지 복사 미지원 브라우저입니다.', 'fa-circle-info', 'text-blue-400');
-                    }
-                });
-            } catch(e) {
-                showToast('클립보드 복사를 지원하지 않는 환경입니다.', 'fa-circle-xmark', 'text-red-400');
-            }
-        }
-
-        // History Manager
-        function addToHistory(content) {
-            if(!content) return;
-            // Avoid immediate duplicate
-            if(recentHistory.length > 0 && recentHistory[0].content === content) return;
-
-            recentHistory.unshift({
-                content: content,
-                type: currentTab,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            buttons.forEach(btn => {
+                btn.className = "filter-btn px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-white text-slate-600 hover:bg-slate-100 transition-all border border-slate-200";
             });
 
-            if(recentHistory.length > 5) recentHistory.pop();
-            renderHistory();
+            event.target.className = "filter-btn active px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-brand-600 text-white transition-all shadow-sm";
+
+            items.forEach(item => {
+                if (category === 'all' || item.classList.contains(category)) {
+                    item.style.display = 'block';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
         }
 
-        function renderHistory() {
-            const container = document.getElementById('historyList');
-            if(recentHistory.length === 0) {
-                container.innerHTML = '<p class="text-slate-400 text-center py-4">생성된 기록이 없습니다.</p>';
-                return;
-            }
-
-            container.innerHTML = recentHistory.map((item, idx) => `
-                <div onclick="restoreHistory(${idx})" class="p-2.5 bg-slate-50 hover:bg-blue-50 border border-slate-100 rounded-xl cursor-pointer transition-all flex items-center justify-between group">
-                    <div class="truncate max-w-[200px]">
-                        <span class="font-semibold text-slate-700 block truncate">${escapeHtml(item.content)}</span>
-                        <span class="text-[10px] text-slate-400">${item.type.toUpperCase()} • ${item.time}</span>
-                    </div>
-                    <i class="fa-solid fa-arrow-rotate-left text-slate-300 group-hover:text-blue-600 text-xs"></i>
-                </div>
-            `).join('');
-        }
-
-        function restoreHistory(index) {
-            const item = recentHistory[index];
+        // Modal Functions
+        function openPortfolioModal(index) {
+            const item = portfolioData[index];
             if(!item) return;
 
-            switchTab(item.type);
-            if(item.type === 'url') document.getElementById('input-url').value = item.content;
-            if(item.type === 'text') document.getElementById('input-text').value = item.content;
-            if(item.type === 'tel') document.getElementById('input-tel').value = item.content.replace('tel:', '');
-            if(item.type === 'email') document.getElementById('input-email').value = item.content.replace('mailto:', '');
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = `
+                <div class="relative h-64 rounded-xl overflow-hidden mb-6">
+                    <img src="${item.img}" class="w-full h-full object-cover">
+                    <span class="absolute top-3 left-3 bg-brand-600 text-white text-xs font-bold px-3 py-1 rounded-full">${item.category}</span>
+                </div>
+                <div class="text-xs text-slate-400 font-medium">${item.location}</div>
+                <h3 class="text-2xl font-bold text-slate-900 mb-4">${item.title}</h3>
+                
+                <div class="grid grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl text-xs text-slate-700 mb-6 border border-slate-100">
+                    <div><strong class="text-slate-900">대지 면적:</strong> ${item.landArea}</div>
+                    <div><strong class="text-slate-900">연면적:</strong> ${item.totalArea}</div>
+                    <div><strong class="text-slate-900">건축 규모:</strong> ${item.floors}</div>
+                    <div><strong class="text-slate-900">주요 용도:</strong> ${item.usage}</div>
+                </div>
 
-            generateQR(true);
+                <p class="text-slate-600 text-sm leading-relaxed mb-6">${item.description}</p>
+
+                <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+                    <button onclick="closePortfolioModal()" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl transition-all">닫기</button>
+                    <a href="#contact" onclick="closePortfolioModal()" class="px-5 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold rounded-xl transition-all">유사 사례 상담 신청</a>
+                </div>
+            `;
+
+            document.getElementById('portfolioModal').classList.remove('hidden');
         }
 
-        function clearHistory() {
-            recentHistory = [];
-            renderHistory();
-            showToast('목록이 초기화되었습니다.', 'fa-circle-check', 'text-green-400');
+        function closePortfolioModal() {
+            document.getElementById('portfolioModal').classList.add('hidden');
         }
 
-        // Preset Quick Fill
-        document.getElementById('quickPresetBtn').addEventListener('click', () => {
-            switchTab('url');
-            document.getElementById('input-url').value = 'https://www.korea.kr';
-            generateQR(true);
-        });
+        // FAQ Accordion
+        function toggleFaq(btn) {
+            const answer = btn.nextElementSibling;
+            const icon = btn.querySelector('i');
 
-        // Toast Helper
-        let toastTimeout;
-        function showToast(msg, iconClass = 'fa-circle-check', iconColor = 'text-green-400') {
-            const toast = document.getElementById('toast');
-            const toastMsg = document.getElementById('toastMsg');
-            const toastIcon = document.getElementById('toastIcon');
-
-            toastMsg.innerText = msg;
-            toastIcon.className = `fa-solid ${iconClass} ${iconColor} text-lg`;
-
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            toast.classList.add('translate-y-0', 'opacity-100');
-
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => {
-                toast.classList.remove('translate-y-0', 'opacity-100');
-                toast.classList.add('translate-y-20', 'opacity-0');
-            }, 2500);
+            if (answer.classList.contains('hidden')) {
+                answer.classList.remove('hidden');
+                icon.style.transform = 'rotate(180deg)';
+            } else {
+                answer.classList.add('hidden');
+                icon.style.transform = 'rotate(0deg)';
+            }
         }
 
-        function escapeHtml(str) {
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        // Form Submission Notification
+        function submitConsultation(e) {
+            e.preventDefault();
+            const address = document.getElementById('formAddress').value;
+            
+            // Custom toast notification instead of alert()
+            const toast = document.createElement('div');
+            toast.className = "fixed bottom-8 right-8 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl border border-slate-700 z-50 flex items-center gap-3 animate-bounce";
+            toast.innerHTML = `
+                <div class="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div>
+                    <div class="font-bold text-sm">가설계 신청이 완료되었습니다!</div>
+                    <div class="text-xs text-slate-300">'${address}' 검토 후 24시간 내 연락드리겠습니다.</div>
+                </div>
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 5000);
+
+            document.getElementById('consultForm').reset();
         }
 
-        // Initialize App on Page Load
+        // Initialize Calculator on Load
         window.onload = function() {
-            generateQR(false);
+            calculateFeasibility();
         };
     </script>
+
 </body>
 </html>
