@@ -1,1 +1,1307 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 스마트 현장 위험성평가 에이전트</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap');
+        
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
 
+        /* Printable Sheet Styling */
+        @media print {
+            body {
+                background-color: #ffffff !important;
+                color: #000000 !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .print-card {
+                box-shadow: none !important;
+                border: 1px solid #000 !important;
+                background: white !important;
+                color: black !important;
+            }
+            .print-table th, .print-table td {
+                border: 1px solid #000 !important;
+                color: black !important;
+                padding: 6px !important;
+                font-size: 11px !important;
+            }
+        }
+
+        /* Scanner Animation Effects */
+        .scanner-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #ef4444, #f59e0b, #ef4444, transparent);
+            box-shadow: 0 0 15px #ef4444;
+            animation: scan 2.5s infinite ease-in-out;
+        }
+
+        @keyframes scan {
+            0% { top: 0%; opacity: 0.8; }
+            50% { top: 95%; opacity: 1; }
+            100% { top: 0%; opacity: 0.8; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="no-print bg-slate-900/90 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="p-2 bg-gradient-to-tr from-amber-500 to-red-600 rounded-xl shadow-lg shadow-amber-500/20 text-white">
+                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-black text-lg sm:text-xl tracking-tight text-white flex items-center gap-2">
+                        SafetyAI <span class="text-xs px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-semibold border border-amber-500/30">KOSHA 규격</span>
+                    </h1>
+                    <p class="text-xs text-slate-400 hidden sm:block">AI 기반 현장 사진 위험성평가 자동 작성 에이전트</p>
+                </div>
+            </div>
+
+            <!-- Header Action Controls -->
+            <div class="flex items-center gap-3">
+                <button onclick="toggleMatrixModal()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-table-cells text-amber-400"></i>
+                    <span>위험도 매트릭스 기준</span>
+                </button>
+                <button onclick="openHistoryModal()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left text-blue-400"></i>
+                    <span class="hidden sm:inline">평가 이력</span>
+                </button>
+                <div id="apiKeyBadge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span>Gemini 3 Flash 가동중</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+        <!-- Top Banner / Guide -->
+        <div class="no-print bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+            <div class="absolute right-0 top-0 bottom-0 w-1/3 bg-gradient-to-l from-amber-500/10 to-transparent pointer-events-none"></div>
+            <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div class="space-y-1">
+                    <h2 class="text-xl font-bold text-slate-100 flex items-center gap-2">
+                        <i class="fa-solid fa-camera-retro text-amber-400"></i>
+                        현장 사진 한 장으로 완성하는 안전보건 위험성평가
+                    </h2>
+                    <p class="text-sm text-slate-400">
+                        작업 현장, 위험 설비, 불안전한 상태의 사진을 첨부하세요. AI가 KOSHA 가이드라인에 맞춰 유해위험요인, 위험도(빈도x강도), 법적 근거 및 개선대책을 자동 수립합니다.
+                    </p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button onclick="loadSampleScenario('ladder')" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 rounded-lg transition">
+                        ⚡ 예시 1: 고소 사다리
+                    </button>
+                    <button onclick="loadSampleScenario('electric')" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-blue-300 border border-blue-500/30 rounded-lg transition">
+                        ⚡ 예시 2: 분전반 감전
+                    </button>
+                    <button onclick="loadSampleScenario('chemical')" class="px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/30 rounded-lg transition">
+                        ⚡ 예시 3: 화학물질 누출
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Workspace Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- Left Column: Image Input & AI Control Panel (4 Cols) -->
+            <div class="no-print lg:col-span-4 space-y-5">
+                
+                <!-- Card: Image Capture / Upload -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                            <i class="fa-solid fa-image text-amber-400"></i> 현장 사진 첨부 및 촬영
+                        </h3>
+                        <span class="text-xs text-slate-500">JPG, PNG, WEBP</span>
+                    </div>
+
+                    <!-- Image Display / Dropzone -->
+                    <div id="imageContainer" class="relative group border-2 border-dashed border-slate-700 hover:border-amber-500/50 bg-slate-950 rounded-xl overflow-hidden min-h-[220px] flex flex-col items-center justify-center p-4 transition text-center cursor-pointer">
+                        <input type="file" id="imageInput" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+                        
+                        <!-- Scanning Animation Overlay -->
+                        <div id="scannerOverlay" class="hidden absolute inset-0 bg-slate-950/70 backdrop-blur-xs z-20 flex flex-col items-center justify-center space-y-3">
+                            <div class="scanner-line"></div>
+                            <div class="w-12 h-12 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                            <p class="text-xs font-bold text-amber-400 animate-pulse">AI 현장 위험요인 정밀 스캔 중...</p>
+                            <p id="analysisStepText" class="text-[11px] text-slate-400">이미지 구조 및 가공 상태 파악</p>
+                        </div>
+
+                        <!-- Placeholder View -->
+                        <div id="uploadPlaceholder" class="space-y-3 pointer-events-none" onclick="document.getElementById('imageInput').click()">
+                            <div class="w-12 h-12 rounded-full bg-slate-800 text-amber-400 flex items-center justify-center mx-auto text-xl group-hover:scale-110 transition">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                            </div>
+                            <div>
+                                <p class="text-xs font-semibold text-slate-300">클릭하여 사진 선택 또는 드래그</p>
+                                <p class="text-[11px] text-slate-500 mt-0.5">모바일에서는 카메라로 직접 촬영 가능</p>
+                            </div>
+                        </div>
+
+                        <!-- Preview Image View -->
+                        <img id="imagePreview" class="hidden max-h-[320px] w-full object-contain rounded-lg" alt="현장 사진">
+                    </div>
+
+                    <!-- Buttons Row -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="document.getElementById('imageInput').click()" class="py-2 px-3 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-folder-open"></i> 파일 선택
+                        </button>
+                        <button onclick="openCameraModal()" class="py-2 px-3 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg transition flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-camera"></i> 카메라 촬영
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Card: Evaluation Metadata Input -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-4">
+                    <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-clipboard-user text-blue-400"></i> 평가 기본 정보 설정
+                    </h3>
+
+                    <div class="space-y-3 text-xs">
+                        <div>
+                            <label class="block text-slate-400 font-medium mb-1">사업장/공정명</label>
+                            <input type="text" id="siteNameInput" value="(주)한국안전 건설현장 / 제1공정" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500 transition">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-slate-400 font-medium mb-1">평가 구 분</label>
+                                <select id="evalTypeSelect" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-2 text-slate-200 focus:outline-none focus:border-amber-500 transition">
+                                    <option value="수시평가(작업변경/위험발견)">수시평가</option>
+                                    <option value="최초평가">최초평가</option>
+                                    <option value="정기평가">정기평가</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-slate-400 font-medium mb-1">평가자 성명</label>
+                                <input type="text" id="evaluatorInput" value="김안전 관리감독자" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-500 transition">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-slate-400 font-medium mb-1">추가 현장 상황 맥락 (선택)</label>
+                            <textarea id="additionalContextInput" rows="2" placeholder="예: 야간 작업 예정, 강풍 우려, 신규 작업자 투입 공정 등" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-slate-200 placeholder-slate-600 focus:outline-none focus:border-amber-500 transition resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- AI Generate Button -->
+                    <button id="generateBtn" onclick="generateRiskAssessment()" class="w-full py-3.5 px-4 bg-gradient-to-r from-amber-500 to-red-600 hover:from-amber-400 hover:to-red-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 group">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-200 group-hover:rotate-12 transition transform"></i>
+                        <span>AI 위험성평가 작성 시작</span>
+                    </button>
+                </div>
+
+                <!-- Guidance Tips Card -->
+                <div class="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 space-y-2 text-xs text-slate-400">
+                    <p class="font-bold text-slate-300 flex items-center gap-1.5">
+                        <i class="fa-solid fa-lightbulb text-amber-400"></i> KOSHA 위험성평가 가이드
+                    </p>
+                    <ul class="list-disc list-inside space-y-1 text-slate-400">
+                        <li>위험도 = <span class="text-amber-300 font-medium">빈도(1~5) × 강도(1~5)</span> 25점 체계 적용</li>
+                        <li>위험도 <span class="text-red-400 font-semibold">15점 이상</span>: 즉시 개선 (고위험)</li>
+                        <li>개선 대책은 <span class="text-blue-300 font-medium">근본적 제거 &gt; 기술적 &gt; 관리적 &gt; 보호구</span> 순 적용</li>
+                    </ul>
+                </div>
+
+            </div>
+
+            <!-- Right Column: Standard Risk Assessment Sheet & Editing Controls (8 Cols) -->
+            <div class="lg:col-span-8 space-y-4">
+
+                <!-- Action Toolbar Above Form -->
+                <div class="no-print bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3 shadow-lg">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-slate-400">서식 뷰:</span>
+                        <span class="px-2.5 py-1 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center gap-1">
+                            <i class="fa-solid fa-file-contract"></i> KOSHA 표준 위험성평가표
+                        </span>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <!-- Add Row Button -->
+                        <button onclick="addNewHazardRow()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1">
+                            <i class="fa-solid fa-plus text-emerald-400"></i> 항목 추가
+                        </button>
+                        <!-- Voice Briefing Button -->
+                        <button id="ttsPlayBtn" onclick="speakAssessmentBriefing()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 border border-indigo-700/50 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-volume-high text-indigo-400"></i>
+                            <span>음성 브리핑 (TTS)</span>
+                        </button>
+                        <!-- Copy & Print Buttons -->
+                        <button onclick="copyTableToClipboard()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition flex items-center gap-1">
+                            <i class="fa-solid fa-copy text-blue-400"></i> 복사
+                        </button>
+                        <button onclick="window.print()" class="px-3 py-1.5 text-xs font-bold rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md transition flex items-center gap-1">
+                            <i class="fa-solid fa-print"></i> 출 력 / PDF
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Target Document Sheet Card (Print Optimized) -->
+                <div id="assessmentSheetCard" class="print-card bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl space-y-6">
+                    
+                    <!-- Form Header Section -->
+                    <div class="border-b border-slate-800 pb-5 space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <div>
+                                <h2 class="text-xl sm:text-2xl font-black text-white tracking-tight flex items-center gap-2">
+                                    <span id="displayDocTitle">위험성평가 실시 기록부</span>
+                                </h2>
+                                <p class="text-xs text-slate-400 mt-1">
+                                    산업안전보건법 제36조(위험성평가의 실시) 및 사업장 위험성평가에 관한 고시 준수
+                                </p>
+                            </div>
+                            <div class="text-right text-xs text-slate-400 space-y-1">
+                                <div><span class="text-slate-500">평가 일자:</span> <span id="displayEvalDate" class="text-slate-200 font-semibold">2026-07-27</span></div>
+                                <div><span class="text-slate-500">평가 구분:</span> <span id="displayEvalType" class="text-amber-400 font-semibold">수시평가</span></div>
+                            </div>
+                        </div>
+
+                        <!-- Info Grid Table -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-950 border border-slate-800 rounded-xl p-3.5 text-xs">
+                            <div>
+                                <span class="text-slate-500 block">사업장 / 공정명</span>
+                                <span id="displaySiteName" class="font-bold text-slate-200">-(미지정)-</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block">평가 대상 작업</span>
+                                <span id="displayWorkType" class="font-bold text-slate-200">사진 분석 대상 작업</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block">평 가 자</span>
+                                <span id="displayEvaluator" class="font-bold text-slate-200">-(미지정)-</span>
+                            </div>
+                            <div>
+                                <span class="text-slate-500 block">총 발견 위험요인</span>
+                                <span id="displayHazardCount" class="font-bold text-amber-400">0 건</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Risk Assessment Sheet Main Table -->
+                    <div class="overflow-x-auto">
+                        <table class="print-table w-full text-left border-collapse border border-slate-800 text-xs">
+                            <thead>
+                                <tr class="bg-slate-800/90 text-slate-300 font-bold border-b border-slate-700">
+                                    <th class="p-2.5 border border-slate-700 w-10 text-center">No</th>
+                                    <th class="p-2.5 border border-slate-700 min-w-[140px]">세부장소/공정</th>
+                                    <th class="p-2.5 border border-slate-700 min-w-[180px]">유해·위험요인 (Hazard)</th>
+                                    <th class="p-2.5 border border-slate-700 w-20 text-center">위험형태</th>
+                                    <th class="p-2.5 border border-slate-700 w-24 text-center">현재 위험도<br><span class="text-[10px] font-normal text-slate-400">(빈도x강도)</span></th>
+                                    <th class="p-2.5 border border-slate-700 min-w-[220px]">감소대책 (Control Measures)</th>
+                                    <th class="p-2.5 border border-slate-700 min-w-[150px]">관련 법령/기준</th>
+                                    <th class="p-2.5 border border-slate-700 w-20 text-center">개선후<br>위험도</th>
+                                    <th class="p-2.5 border border-slate-700 w-20 text-center">조치기한/담당</th>
+                                    <th class="p-2.5 border border-slate-700 w-10 no-print text-center">삭제</th>
+                                </tr>
+                            </thead>
+                            <tbody id="hazardTableBody" class="divide-y divide-slate-800 text-slate-300">
+                                <!-- Empty Initial State -->
+                                <tr id="emptyTableState">
+                                    <td colspan="10" class="p-8 text-center text-slate-500">
+                                        <div class="space-y-2">
+                                            <i class="fa-solid fa-clipboard-list text-3xl text-slate-700"></i>
+                                            <p class="text-sm font-medium">작성된 위험성평가 항목이 없습니다.</p>
+                                            <p class="text-xs text-slate-600">좌측에서 사진을 첨부하거나 상단 샘플 버튼을 눌러 AI 평가를 실행하세요.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Summary & Signature Box -->
+                    <div class="border-t border-slate-800 pt-4 space-y-4">
+                        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 text-xs space-y-2">
+                            <h4 class="font-bold text-amber-400 flex items-center gap-1.5">
+                                <i class="fa-solid fa-shield-cat"></i> 종합 총평 및 긴급 안전조치 사항
+                            </h4>
+                            <p id="overallSummaryText" class="text-slate-300 leading-relaxed italic">
+                                현장 사진 분석 결과가 여기에 종합되어 표시됩니다.
+                            </p>
+                        </div>
+
+                        <!-- Signatures Layout -->
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-4 text-xs pt-2">
+                            <div class="border border-slate-800 bg-slate-950/50 p-3 rounded-lg text-center space-y-2">
+                                <span class="text-slate-500 block">평가 작성자</span>
+                                <div class="font-bold text-slate-300" id="signEvaluator">(서명/인)</div>
+                            </div>
+                            <div class="border border-slate-800 bg-slate-950/50 p-3 rounded-lg text-center space-y-2">
+                                <span class="text-slate-500 block">안전관리자 검토</span>
+                                <div class="font-bold text-slate-300">(서명/인)</div>
+                            </div>
+                            <div class="border border-slate-800 bg-slate-950/50 p-3 rounded-lg text-center space-y-2 col-span-2 md:col-span-1">
+                                <span class="text-slate-500 block">사업주 / 현장소장 승인</span>
+                                <div class="font-bold text-slate-300">(서명/인)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Modal 1: Webcam Camera Capture Modal -->
+    <div id="cameraModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-lg w-full p-5 space-y-4 shadow-2xl">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-video text-amber-400"></i> 현장 사진 실시간 촬영
+                </h3>
+                <button onclick="closeCameraModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            
+            <div class="relative bg-black rounded-xl overflow-hidden aspect-video flex items-center justify-center">
+                <video id="webcamVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+                <canvas id="webcamCanvas" class="hidden"></canvas>
+            </div>
+
+            <div class="flex justify-end gap-2">
+                <button onclick="closeCameraModal()" class="px-4 py-2 text-xs font-semibold bg-slate-800 text-slate-300 rounded-lg">취소</button>
+                <button onclick="captureFromCamera()" class="px-4 py-2 text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-lg flex items-center gap-1.5">
+                    <i class="fa-solid fa-camera"></i> 캡처하여 적용
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Risk Matrix Guide Reference Modal -->
+    <div id="matrixModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-slate-100 text-base flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells text-amber-400"></i> 5x5 위험도 산정 매트릭스 기준 (KOSHA)
+                </h3>
+                <button onclick="toggleMatrixModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                <p class="text-slate-300">
+                    위험도 = <span class="font-bold text-amber-400">가능성(빈도: 1~5점) × 중대성(강도: 1~5점)</span> 곱으로 결정되며, 점수에 따라 3단계 위험 수준으로 분류합니다.
+                </p>
+
+                <!-- Matrix Colors Grid -->
+                <div class="border border-slate-800 rounded-xl overflow-hidden">
+                    <table class="w-full text-center border-collapse">
+                        <thead>
+                            <tr class="bg-slate-800 text-slate-300 font-bold">
+                                <th class="p-2 border border-slate-700">빈도 \ 강도</th>
+                                <th class="p-2 border border-slate-700">1 (경미)</th>
+                                <th class="p-2 border border-slate-700">2 (소형)</th>
+                                <th class="p-2 border border-slate-700">3 (중형)</th>
+                                <th class="p-2 border border-slate-700">4 (대형)</th>
+                                <th class="p-2 border border-slate-700">5 (치명)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="font-bold text-slate-900">
+                            <tr>
+                                <td class="p-2 border border-slate-700 bg-slate-800 text-slate-300">5 (매우높음)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">5 (중)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">10 (중)</td>
+                                <td class="p-2 border border-slate-700 bg-red-500 text-white">15 (상)</td>
+                                <td class="p-2 border border-slate-700 bg-red-600 text-white">20 (상)</td>
+                                <td class="p-2 border border-slate-700 bg-red-600 text-white">25 (상)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-700 bg-slate-800 text-slate-300">4 (높음)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">4 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">8 (중)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">12 (중)</td>
+                                <td class="p-2 border border-slate-700 bg-red-500 text-white">16 (상)</td>
+                                <td class="p-2 border border-slate-700 bg-red-600 text-white">20 (상)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-700 bg-slate-800 text-slate-300">3 (보통)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">3 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">6 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">9 (중)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">12 (중)</td>
+                                <td class="p-2 border border-slate-700 bg-red-500 text-white">15 (상)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-700 bg-slate-800 text-slate-300">2 (낮음)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">2 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">4 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">6 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">8 (중)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">10 (중)</td>
+                            </tr>
+                            <tr>
+                                <td class="p-2 border border-slate-700 bg-slate-800 text-slate-300">1 (매우낮음)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">1 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">2 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">3 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-emerald-400">4 (하)</td>
+                                <td class="p-2 border border-slate-700 bg-yellow-400">5 (중)</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Criteria Description -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="p-2.5 rounded-lg bg-red-950/40 border border-red-800/60 text-red-200">
+                        <div class="font-bold text-red-400">고위험 (상: 15~25)</div>
+                        <p class="mt-1 text-[11px] text-red-300">작업 즉시 중지 및 즉각 개선 대책 수립 필요</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-amber-950/40 border border-amber-800/60 text-amber-200">
+                        <div class="font-bold text-amber-400">중위험 (중: 8~14)</div>
+                        <p class="mt-1 text-[11px] text-amber-300">계획적 개선 조치 및 안전 지침 수립</p>
+                    </div>
+                    <div class="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-800/60 text-emerald-200">
+                        <div class="font-bold text-emerald-400">저위험 (하: 1~7)</div>
+                        <p class="mt-1 text-[11px] text-emerald-300">현재 상태 유지 또는 관리적 주의</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button onclick="toggleMatrixModal()" class="px-4 py-2 text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg">확인</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: History Modal -->
+    <div id="historyModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl max-h-[80vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+                <h3 class="font-bold text-slate-200 text-sm flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-blue-400"></i> 과거 위험성평가 저장 목록
+                </h3>
+                <button onclick="closeHistoryModal()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <div id="historyListContainer" class="flex-1 overflow-y-auto space-y-2 pr-1 text-xs">
+                <!-- Dynamically populated -->
+            </div>
+
+            <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+                <button onclick="clearAllHistory()" class="text-xs text-red-400 hover:underline">전체 삭제</button>
+                <button onclick="closeHistoryModal()" class="px-4 py-2 text-xs font-semibold bg-slate-800 text-slate-300 rounded-lg">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Audio Element for Generated TTS -->
+    <audio id="ttsAudioPlayer" class="hidden"></audio>
+
+    <script>
+        // Global State Variables
+        let currentImageBase64 = null;
+        let hazardItems = [];
+        let historyData = JSON.parse(localStorage.getItem('safety_risk_history') || '[]');
+        let webcamStream = null;
+
+        // Initialize Lucide Icons
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+            updateDateDisplay();
+            loadHistoryToModal();
+        });
+
+        function updateDateDisplay() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('displayEvalDate').innerText = today;
+        }
+
+        // Show Custom Toast Message (Replacing alert)
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-slate-800 border-slate-700 text-slate-200';
+            let icon = 'fa-circle-info text-blue-400';
+            
+            if (type === 'success') {
+                bgClass = 'bg-emerald-950 border-emerald-800 text-emerald-200';
+                icon = 'fa-circle-check text-emerald-400';
+            } else if (type === 'error') {
+                bgClass = 'bg-red-950 border-red-800 text-red-200';
+                icon = 'fa-triangle-exclamation text-red-400';
+            } else if (type === 'warning') {
+                bgClass = 'bg-amber-950 border-amber-800 text-amber-200';
+                icon = 'fa-triangle-exclamation text-amber-400';
+            }
+
+            toast.className = `px-4 py-3 rounded-xl border shadow-xl flex items-center gap-3 text-xs font-semibold transform transition-all duration-300 translate-y-2 opacity-0 pointer-events-auto ${bgClass}`;
+            toast.innerHTML = `<i class="fa-solid ${icon} text-base"></i><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-2', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 4000);
+        }
+
+        // Image Handling Functions
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast('이미지 파일(JPG, PNG, WEBP 등)만 선택 가능합니다.', 'error');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentImageBase64 = e.target.result;
+                displayPreviewImage(currentImageBase64);
+                showToast('현장 사진이 성공적으로 첨부되었습니다.', 'success');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function displayPreviewImage(dataUrl) {
+            const imgEl = document.getElementById('imagePreview');
+            const placeholder = document.getElementById('uploadPlaceholder');
+            imgEl.src = dataUrl;
+            imgEl.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+        }
+
+        // Built-in Sample Scenarios (Generates synthetic SVG base64 representations for instant demo)
+        function loadSampleScenario(type) {
+            let svgText = "";
+            let siteName = "";
+            let context = "";
+
+            if (type === 'ladder') {
+                siteName = "(주)안전건설 / 설비 정비공정";
+                context = "이동식 A형 사다리 2m 이상 고소작업 중 2인 1조 미준수 및 안전모 턱끈 미착용";
+                svgText = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+                    <rect width="600" height="400" fill="#1e293b"/>
+                    <rect x="0" y="320" width="600" height="80" fill="#334155"/>
+                    <!-- High Ladder -->
+                    <line x1="250" y1="340" x2="290" y2="80" stroke="#f59e0b" stroke-width="8"/>
+                    <line x1="320" y1="340" x2="290" y2="80" stroke="#f59e0b" stroke-width="8"/>
+                    <line x1="260" y1="280" x2="310" y2="280" stroke="#f59e0b" stroke-width="5"/>
+                    <line x1="270" y1="220" x2="305" y2="220" stroke="#f59e0b" stroke-width="5"/>
+                    <line x1="278" y1="160" x2="298" y2="160" stroke="#f59e0b" stroke-width="5"/>
+                    <!-- Unsafe Worker -->
+                    <circle cx="290" cy="50" r="16" fill="#ef4444"/>
+                    <line x1="290" y1="66" x2="290" y2="120" stroke="#38bdf8" stroke-width="10"/>
+                    <text x="30" y="50" fill="#f8fafc" font-size="20" font-weight="bold">[위험 상황] 이동식 사다리 고소작업 추락 위험</text>
+                    <text x="30" y="80" fill="#94a3b8" font-size="14">아웃트리거 미설치, 안전대 미착용, 바닥 불균형</text>
+                </svg>`;
+            } else if (type === 'electric') {
+                siteName = "(주)한빛제조 / 배전반실";
+                context = "임시 배전반 문 열림 상태 및 바닥 누수로 인한 감전 및 단락 화재 우려";
+                svgText = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+                    <rect width="600" height="400" fill="#0f172a"/>
+                    <rect x="180" y="80" width="240" height="240" fill="#475569" stroke="#ef4444" stroke-width="6"/>
+                    <path d="M 230 140 L 270 200 L 250 200 L 290 260" stroke="#f59e0b" stroke-width="8" fill="none"/>
+                    <ellipse cx="300" cy="350" rx="180" ry="25" fill="#0284c7" opacity="0.6"/>
+                    <text x="30" y="50" fill="#f8fafc" font-size="20" font-weight="bold">[위험 상황] 수전반 노출 및 습기/바닥 누수</text>
+                    <text x="30" y="80" fill="#94a3b8" font-size="14">충전부 직접 접촉 감전 위험 및 절연파괴</text>
+                </svg>`;
+            } else if (type === 'chemical') {
+                siteName = "(주)케미컬테크 / 화학물질 소분장";
+                context = "유해화학물질(용제) 용기 밀폐 미흡, MSDS 경고표지 누락 및 세안시설 불량";
+                svgText = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+                    <rect width="600" height="400" fill="#1e1b4b"/>
+                    <rect x="220" y="150" width="160" height="180" rx="20" fill="#10b981" opacity="0.8"/>
+                    <path d="M 200 330 Q 300 310 400 350" stroke="#a855f7" stroke-width="20" fill="none"/>
+                    <text x="30" y="50" fill="#f8fafc" font-size="20" font-weight="bold">[위험 상황] 화학물질 드럼 누출 및 경고표시 누락</text>
+                    <text x="30" y="80" fill="#94a3b8" font-size="14">국소배기장치 미가동, 불침투성 보호구 미착용</text>
+                </svg>`;
+            }
+
+            const encodedSvg = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgText)));
+            currentImageBase64 = encodedSvg;
+            displayPreviewImage(currentImageBase64);
+
+            document.getElementById('siteNameInput').value = siteName;
+            document.getElementById('additionalContextInput').value = context;
+
+            showToast(`샘플 시나리오(${type})가 로드되었습니다. 'AI 위험성평가 작성 시작'을 누르세요.`, 'info');
+        }
+
+        // Camera Modal Functions
+        async function openCameraModal() {
+            const modal = document.getElementById('cameraModal');
+            const video = document.getElementById('webcamVideo');
+            modal.classList.remove('hidden');
+
+            try {
+                webcamStream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
+                video.srcObject = webcamStream;
+            } catch (err) {
+                showToast('카메라에 접근할 수 없습니다. 권한을 확인해주세요.', 'error');
+                closeCameraModal();
+            }
+        }
+
+        function closeCameraModal() {
+            const modal = document.getElementById('cameraModal');
+            modal.classList.add('hidden');
+            if (webcamStream) {
+                webcamStream.getTracks().forEach(track => track.stop());
+                webcamStream = null;
+            }
+        }
+
+        function captureFromCamera() {
+            const video = document.getElementById('webcamVideo');
+            const canvas = document.getElementById('webcamCanvas');
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            currentImageBase64 = canvas.toDataURL('image/jpeg');
+            displayPreviewImage(currentImageBase64);
+            closeCameraModal();
+            showToast('카메라 사진이 촬영되어 적용되었습니다.', 'success');
+        }
+
+        // Main Gemini API Analysis Logic
+        async function generateRiskAssessment() {
+            if (!currentImageBase64) {
+                showToast('분석할 현장 사진을 먼저 등록하거나 샘플을 선택해주세요.', 'warning');
+                return;
+            }
+
+            const siteName = document.getElementById('siteNameInput').value.trim() || "사업장 미지정";
+            const evalType = document.getElementById('evalTypeSelect').value;
+            const evaluator = document.getElementById('evaluatorInput').value.trim() || "평가자 미지정";
+            const extraContext = document.getElementById('additionalContextInput').value.trim();
+
+            // Update UI Labels
+            document.getElementById('displaySiteName').innerText = siteName;
+            document.getElementById('displayEvalType').innerText = evalType;
+            document.getElementById('displayEvaluator').innerText = evaluator;
+            document.getElementById('signEvaluator').innerText = evaluator;
+
+            // Show Scanner UI
+            const scannerOverlay = document.getElementById('scannerOverlay');
+            const stepText = document.getElementById('analysisStepText');
+            scannerOverlay.classList.remove('hidden');
+
+            const steps = [
+                "1/4: 시각적 작업 환경 및 설비 상태 파악 중...",
+                "2/4: KOSHA 위험성평가 표준 유해위험요인 매칭...",
+                "3/4: 5x5 빈도·강도법 위험도(Matrix) 산정 중...",
+                "4/4: 산업안전보건기준에 관한 규칙 법적 개선대책 수립..."
+            ];
+
+            let stepIdx = 0;
+            const stepInterval = setInterval(() => {
+                stepIdx = (stepIdx + 1) % steps.length;
+                stepText.innerText = steps[stepIdx];
+            }, 1200);
+
+            try {
+                // Prepare Base64 Data
+                let mimeType = "image/jpeg";
+                let base64Data = "";
+                
+                if (currentImageBase64.startsWith("data:")) {
+                    const parts = currentImageBase64.split(",");
+                    mimeType = parts[0].match(/:(.*?);/)[1] || "image/jpeg";
+                    base64Data = parts[1];
+                } else {
+                    base64Data = currentImageBase64;
+                }
+
+                // Construct Prompt
+                const systemInstruction = `당신은 대한민국 산업안전보건법 및 한국산업안전보건공단(KOSHA) 가이드라인을 완전 준수하는 최고 레벨의 산업안전 위험성평가 전문 에이전트입니다.
+제공된 현장 사진과 보조 설명 정보를 정밀 분석하여, 관찰되는 불안전한 상태(Unsafe Condition) 및 불안전한 행동(Unsafe Act)에 대한 유해위험요인을 최소 2개 이상 발굴하고 위험성평가표를 작성하세요.
+
+[위험도 산정 기준 - 5x5 빈도강도법]
+- 빈도(Frequency): 1(매우낮음) ~ 5(매우높음)
+- 강도(Severity): 1(경미) ~ 5(치명적 사망)
+- 위험도 = 빈도 × 강도
+- 위험수준 분류: 15~25 = "상(고위험)", 8~14 = "중(중위험)", 1~7 = "하(저위험)"
+
+응답은 반드시 요청된 JSON 구조 형식으로만 답변하세요.`;
+
+                const userPrompt = `현장 사진 및 정보를 분석하여 위험성평가표를 작성해 주세요.
+사업장명: ${siteName}
+평가구분: ${evalType}
+추가현장맥락: ${extraContext || "특이사항 없음"}`;
+
+                const apiKey = ""; // Handled automatically by system runtime
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{
+                        role: "user",
+                        parts: [
+                            { text: userPrompt },
+                            {
+                                inlineData: {
+                                    mimeType: mimeType,
+                                    data: base64Data
+                                }
+                            }
+                        ]
+                    }],
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                        responseSchema: {
+                            type: "OBJECT",
+                            properties: {
+                                assessmentTitle: { type: "STRING" },
+                                workType: { type: "STRING" },
+                                hazards: {
+                                    type: "ARRAY",
+                                    items: {
+                                        type: "OBJECT",
+                                        properties: {
+                                            locationDetail: { type: "STRING" },
+                                            hazardDescription: { type: "STRING" },
+                                            riskCategory: { type: "STRING" }, // 추락, 감전, 끼임, 낙하, 화재, 중독 등
+                                            currentFrequency: { type: "NUMBER" },
+                                            currentSeverity: { type: "NUMBER" },
+                                            controlMeasures: { type: "STRING" },
+                                            legalStandard: { type: "STRING" },
+                                            residualFrequency: { type: "NUMBER" },
+                                            residualSeverity: { type: "NUMBER" },
+                                            assignee: { type: "STRING" },
+                                            dueDate: { type: "STRING" }
+                                        },
+                                        required: ["locationDetail", "hazardDescription", "riskCategory", "currentFrequency", "currentSeverity", "controlMeasures", "legalStandard", "residualFrequency", "residualSeverity"]
+                                    }
+                                },
+                                overallSummary: { type: "STRING" }
+                            },
+                            required: ["hazards", "overallSummary", "workType"]
+                        }
+                    },
+                    systemInstruction: {
+                        parts: [{ text: systemInstruction }]
+                    }
+                };
+
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const jsonText = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                if (!jsonText) {
+                    throw new Error("Gemini API로부터 정형 데이터를 수신하지 못했습니다.");
+                }
+
+                const parsedData = JSON.parse(jsonText);
+                
+                // Update UI with Parsed Result
+                document.getElementById('displayWorkType').innerText = parsedData.workType || "사진 대상 공정";
+                document.getElementById('overallSummaryText').innerText = parsedData.overallSummary || "총평 분석 완료";
+
+                hazardItems = parsedData.hazards || [];
+                renderHazardTable();
+
+                // Save to local storage history
+                saveToHistory(siteName, parsedData.workType, hazardItems.length);
+
+                showToast(`위험성평가 작성이 완료되었습니다! 총 ${hazardItems.length}건의 위험요인이 발굴되었습니다.`, 'success');
+
+            } catch (err) {
+                console.error("Analysis Error:", err);
+                showToast(`AI 분석 중 오류가 발생했습니다: ${err.message}`, 'error');
+            } finally {
+                clearInterval(stepInterval);
+                scannerOverlay.classList.add('hidden');
+            }
+        }
+
+        // Exponential Backoff Fetch Helper
+        async function fetchWithRetry(url, options, retries = 3, backoff = 1000) {
+            try {
+                const res = await fetch(url, options);
+                if (!res.ok && res.status === 429 && retries > 0) {
+                    await new Promise(r => setTimeout(r, backoff));
+                    return fetchWithRetry(url, options, retries - 1, backoff * 2);
+                }
+                return res;
+            } catch (err) {
+                if (retries > 0) {
+                    await new Promise(r => setTimeout(r, backoff));
+                    return fetchWithRetry(url, options, retries - 1, backoff * 2);
+                }
+                throw err;
+            }
+        }
+
+        // Render Hazard Items Table
+        function renderHazardTable() {
+            const tbody = document.getElementById('hazardTableBody');
+            document.getElementById('displayHazardCount').innerText = `${hazardItems.length} 건`;
+
+            if (hazardItems.length === 0) {
+                tbody.innerHTML = `<tr id="emptyTableState">
+                    <td colspan="10" class="p-8 text-center text-slate-500">
+                        <p class="text-sm font-medium">등록된 위험요인이 없습니다.</p>
+                    </td>
+                </tr>`;
+                return;
+            }
+
+            tbody.innerHTML = "";
+
+            hazardItems.forEach((item, index) => {
+                const currentScore = (item.currentFrequency || 1) * (item.currentSeverity || 1);
+                const currentRiskBadge = getRiskBadgeHtml(currentScore);
+
+                const residualScore = (item.residualFrequency || 1) * (item.residualSeverity || 1);
+                const residualBadge = getRiskBadgeHtml(residualScore);
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-800/50 transition border-b border-slate-800";
+                tr.innerHTML = `
+                    <td class="p-2.5 border border-slate-800 text-center font-bold text-slate-400">${index + 1}</td>
+                    
+                    <!-- Location / Detail -->
+                    <td class="p-2 border border-slate-800">
+                        <input type="text" value="${escapeHtml(item.locationDetail || '')}" onchange="updateHazardField(${index}, 'locationDetail', this.value)" class="w-full bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-slate-200 focus:outline-none px-1 py-0.5">
+                    </td>
+
+                    <!-- Hazard Description -->
+                    <td class="p-2 border border-slate-800">
+                        <textarea onchange="updateHazardField(${index}, 'hazardDescription', this.value)" rows="2" class="w-full bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-slate-200 focus:outline-none px-1 py-0.5 resize-y">${escapeHtml(item.hazardDescription || '')}</textarea>
+                    </td>
+
+                    <!-- Category -->
+                    <td class="p-2 border border-slate-800 text-center">
+                        <span class="inline-block px-2 py-0.5 rounded bg-slate-800 text-slate-300 font-medium text-[11px] border border-slate-700">
+                            ${escapeHtml(item.riskCategory || '기타')}
+                        </span>
+                    </td>
+
+                    <!-- Current Risk Matrix Selector -->
+                    <td class="p-2 border border-slate-800 text-center">
+                        <div class="flex flex-col items-center gap-1">
+                            ${currentRiskBadge}
+                            <div class="flex items-center gap-1 text-[10px] text-slate-400 no-print">
+                                <span>빈:${item.currentFrequency || 1}</span>
+                                <span>강:${item.currentSeverity || 1}</span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Control Measures -->
+                    <td class="p-2 border border-slate-800">
+                        <textarea onchange="updateHazardField(${index}, 'controlMeasures', this.value)" rows="2" class="w-full bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-emerald-300 font-medium focus:outline-none px-1 py-0.5 resize-y">${escapeHtml(item.controlMeasures || '')}</textarea>
+                    </td>
+
+                    <!-- Legal Standard -->
+                    <td class="p-2 border border-slate-800">
+                        <input type="text" value="${escapeHtml(item.legalStandard || '')}" onchange="updateHazardField(${index}, 'legalStandard', this.value)" class="w-full bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-slate-400 focus:outline-none px-1 py-0.5">
+                    </td>
+
+                    <!-- Residual Risk Score -->
+                    <td class="p-2 border border-slate-800 text-center">
+                        <div class="flex flex-col items-center justify-center">
+                            ${residualBadge}
+                        </div>
+                    </td>
+
+                    <!-- Assignee & Due Date -->
+                    <td class="p-2 border border-slate-800 text-center text-[11px]">
+                        <input type="text" placeholder="담당자" value="${escapeHtml(item.assignee || '안전팀')}" onchange="updateHazardField(${index}, 'assignee', this.value)" class="w-full bg-transparent text-center border-b border-transparent hover:border-slate-700 text-slate-300 focus:outline-none mb-1">
+                        <input type="text" placeholder="조치기한" value="${escapeHtml(item.dueDate || '즉시')}" onchange="updateHazardField(${index}, 'dueDate', this.value)" class="w-full bg-transparent text-center border-b border-transparent hover:border-slate-700 text-amber-400 font-semibold focus:outline-none">
+                    </td>
+
+                    <!-- Delete Action -->
+                    <td class="p-2 border border-slate-800 text-center no-print">
+                        <button onclick="removeHazardRow(${index})" class="text-slate-500 hover:text-red-400 transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Generate Color Badge according to Score
+        function getRiskBadgeHtml(score) {
+            if (score >= 15) {
+                return `<span class="px-2 py-1 rounded bg-red-600 text-white font-black text-xs shadow-md border border-red-400 inline-flex items-center gap-1">
+                    <i class="fa-solid fa-triangle-exclamation"></i> 상 (${score}점)
+                </span>`;
+            } else if (score >= 8) {
+                return `<span class="px-2 py-1 rounded bg-amber-500 text-slate-950 font-black text-xs shadow-md border border-amber-300 inline-flex items-center gap-1">
+                    중 (${score}점)
+                </span>`;
+            } else {
+                return `<span class="px-2 py-1 rounded bg-emerald-600 text-white font-bold text-xs shadow-sm border border-emerald-400 inline-flex items-center gap-1">
+                    하 (${score}점)
+                </span>`;
+            }
+        }
+
+        // Update Field Value
+        function updateHazardField(index, field, value) {
+            if (hazardItems[index]) {
+                hazardItems[index][field] = value;
+            }
+        }
+
+        // Add New Manual Hazard Row
+        function addNewHazardRow() {
+            hazardItems.push({
+                locationDetail: "신규 작업 장소",
+                hazardDescription: "수동 입력 유해위험요인을 작성하세요.",
+                riskCategory: "기타",
+                currentFrequency: 3,
+                currentSeverity: 3,
+                controlMeasures: "개선 안전대책 수립 입력",
+                legalStandard: "산업안전보건기준에 관한 규칙",
+                residualFrequency: 1,
+                residualSeverity: 2,
+                assignee: "안전담당자",
+                dueDate: "3일 이내"
+            });
+            renderHazardTable();
+            showToast('새 평가 항목이 추가되었습니다.', 'info');
+        }
+
+        // Remove Row
+        function removeHazardRow(index) {
+            hazardItems.splice(index, 1);
+            renderHazardTable();
+            showToast('평가 항목이 삭제되었습니다.', 'info');
+        }
+
+        // Voice Safety Briefing Generator using Gemini 2.5 Flash TTS
+        async function speakAssessmentBriefing() {
+            if (hazardItems.length === 0) {
+                showToast('브리핑할 위험성평가 항목이 없습니다.', 'warning');
+                return;
+            }
+
+            const playBtn = document.getElementById('ttsPlayBtn');
+            const origHtml = playBtn.innerHTML;
+            playBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-indigo-400"></i> 음성 생성중...`;
+            playBtn.disabled = true;
+
+            try {
+                const siteName = document.getElementById('displaySiteName').innerText;
+                const highRisks = hazardItems.filter(i => (i.currentFrequency * i.currentSeverity) >= 15);
+                
+                let script = `안안전 현장 브리핑을 시작합니다. ${siteName} 위험성평가 결과 총 ${hazardItems.length}건의 위험요인이 발굴되었습니다. `;
+                
+                if (highRisks.length > 0) {
+                    script += `특히 상급 고위험 항목이 ${highRisks.length}건 존재하므로 즉시 개선 조치가 필요합니다. 주요 위험 내용으로 ${highRisks[0].hazardDescription}이 지정되었으며 감소 대책으로 ${highRisks[0].controlMeasures}을 반드시 준수하여 주시기 바랍니다. 이상입니다.`;
+                } else {
+                    script += `발견된 주요 요인에 대해 명시된 감소대책을 준수하여 작업 안전을 확보하시기 바랍니다.`;
+                }
+
+                const apiKey = "";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{
+                        parts: [{ text: script }]
+                    }],
+                    generationConfig: {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: {
+                            voiceConfig: {
+                                prebuiltVoiceConfig: { voiceName: "Kore" }
+                            }
+                        }
+                    }
+                };
+
+                const response = await fetchWithRetry(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+                const candidate = result?.candidates?.[0];
+                const part = candidate?.content?.parts?.[0];
+                
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType;
+
+                if (audioData && mimeType) {
+                    // Extract sample rate from mimeType if available
+                    let sampleRate = 24000;
+                    const match = mimeType.match(/rate=(\d+)/);
+                    if (match && match[1]) {
+                        sampleRate = parseInt(match[1], 10);
+                    }
+
+                    // Convert raw PCM to WAV container Blob
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmData);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+
+                    const audioPlayer = document.getElementById('ttsAudioPlayer');
+                    audioPlayer.src = audioUrl;
+                    audioPlayer.play();
+
+                    showToast('현장 음성 안전 브리핑을 재생합니다.', 'success');
+                } else {
+                    // Browser Speech Synthesis Fallback
+                    fallbackBrowserSpeech(script);
+                }
+
+            } catch (err) {
+                console.warn("Gemini TTS Error, falling back to Web Speech:", err);
+                const script = `${document.getElementById('displaySiteName').innerText} 위험성평가 결과 브리핑입니다. 발견된 위험요인 ${hazardItems.length}건에 대해 규정된 안전조치를 준수하십시오.`;
+                fallbackBrowserSpeech(script);
+            } finally {
+                playBtn.innerHTML = origHtml;
+                playBtn.disabled = false;
+            }
+        }
+
+        // Web Speech API Fallback
+        function fallbackBrowserSpeech(text) {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ko-KR';
+                utterance.rate = 1.0;
+                window.speechSynthesis.speak(utterance);
+                showToast('음성 브리핑이 재생됩니다.', 'info');
+            } else {
+                showToast('음성 합성을 지원하지 않는 브라우저입니다.', 'error');
+            }
+        }
+
+        // Helper: Convert PCM16 Array to WAV Blob
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        function pcmToWav(pcm16, sampleRate) {
+            const buffer = new ArrayBuffer(44 + pcm16.length * 2);
+            const view = new DataView(buffer);
+
+            /* RIFF identifier */
+            writeString(view, 0, 'RIFF');
+            /* RIFF chunk length */
+            view.setUint32(4, 36 + pcm16.length * 2, true);
+            /* RIFF type */
+            writeString(view, 8, 'WAVE');
+            /* format chunk identifier */
+            writeString(view, 12, 'fmt ');
+            /* format chunk length */
+            view.setUint32(16, 16, true);
+            /* sample format (raw PCM) */
+            view.setUint16(20, 1, true);
+            /* channel count (mono) */
+            view.setUint16(22, 1, true);
+            /* sample rate */
+            view.setUint32(24, sampleRate, true);
+            /* byte rate (sampleRate * 2) */
+            view.setUint32(28, sampleRate * 2, true);
+            /* block align */
+            view.setUint16(32, 2, true);
+            /* bits per sample */
+            view.setUint16(34, 16, true);
+            /* data chunk identifier */
+            writeString(view, 36, 'data');
+            /* data chunk length */
+            view.setUint32(40, pcm16.length * 2, true);
+
+            // Write PCM samples
+            let offset = 44;
+            for (let i = 0; i < pcm16.length; i++, offset += 2) {
+                view.setInt16(offset, pcm16[i], true);
+            }
+
+            return new Blob([buffer], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+        // Copy Table Data
+        function copyTableToClipboard() {
+            if (hazardItems.length === 0) {
+                showToast('복사할 위험성평가 데이터가 없습니다.', 'warning');
+                return;
+            }
+
+            let text = `[위험성평가 실시 기록부]\n`;
+            text += `사업장: ${document.getElementById('displaySiteName').innerText}\n`;
+            text += `평가일자: ${document.getElementById('displayEvalDate').innerText}\n\n`;
+
+            hazardItems.forEach((item, idx) => {
+                const score = (item.currentFrequency || 1) * (item.currentSeverity || 1);
+                text += `${idx + 1}. [위험도:${score}점] 장소:${item.locationDetail}\n`;
+                text += `   - 위험요인: ${item.hazardDescription}\n`;
+                text += `   - 감소대책: ${item.controlMeasures}\n`;
+                text += `   - 법적근거: ${item.legalStandard}\n\n`;
+            });
+
+            // ExecCommand Fallback for iframe safety
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+
+            showToast('위험성평가 요약 텍스트가 클립보드에 복사되었습니다.', 'success');
+        }
+
+        // Storage & History Modal
+        function saveToHistory(siteName, workType, count) {
+            const newItem = {
+                id: Date.now(),
+                date: new Date().toLocaleDateString('ko-KR'),
+                siteName: siteName,
+                workType: workType,
+                count: count,
+                hazards: [...hazardItems]
+            };
+            historyData.unshift(newItem);
+            if (historyData.length > 20) historyData.pop();
+            localStorage.setItem('safety_risk_history', JSON.stringify(historyData));
+            loadHistoryToModal();
+        }
+
+        function loadHistoryToModal() {
+            const container = document.getElementById('historyListContainer');
+            if (!container) return;
+
+            if (historyData.length === 0) {
+                container.innerHTML = `<p class="text-slate-500 text-center py-4">저장된 기록이 없습니다.</p>`;
+                return;
+            }
+
+            container.innerHTML = historyData.map(item => `
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex justify-between items-center hover:border-slate-700 transition">
+                    <div>
+                        <div class="font-bold text-slate-200">${escapeHtml(item.siteName)} - <span class="text-amber-400">${escapeHtml(item.workType)}</span></div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">${item.date} | 위험요인 ${item.count}건</div>
+                    </div>
+                    <button onclick="restoreHistoryItem(${item.id})" class="px-2.5 py-1 text-[11px] font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700">
+                        불러오기
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function restoreHistoryItem(id) {
+            const target = historyData.find(h => h.id === id);
+            if (!target) return;
+
+            hazardItems = target.hazards || [];
+            document.getElementById('displaySiteName').innerText = target.siteName;
+            document.getElementById('displayWorkType').innerText = target.workType;
+            renderHazardTable();
+            closeHistoryModal();
+            showToast('선택한 과거 평가 기록이 로드되었습니다.', 'success');
+        }
+
+        function clearAllHistory() {
+            historyData = [];
+            localStorage.removeItem('safety_risk_history');
+            loadHistoryToModal();
+            showToast('평가 이력이 모두 삭제되었습니다.', 'info');
+        }
+
+        function openHistoryModal() {
+            loadHistoryToModal();
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+
+        function closeHistoryModal() {
+            document.getElementById('historyModal').classList.add('hidden');
+        }
+
+        function toggleMatrixModal() {
+            const modal = document.getElementById('matrixModal');
+            modal.classList.toggle('hidden');
+        }
+
+        // HTML Escape Helper
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
